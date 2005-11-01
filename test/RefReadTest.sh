@@ -1,9 +1,10 @@
 #!/bin/sh
 
-rm -f *.root
-rm -f PoolFileCatalog.*
+rm -f *.root *.xml *.xml.BAK
 
-ln -s ../../OutputService/test/RefTest.root a.root
-cp a.root b.root
+cp ../../Output/test/*.root .
+cp ../../Output/test/*.xml .
+cp *.root a.root
+
 
 cmsRun --parameter-set RefReadTest.cfg
