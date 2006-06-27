@@ -148,10 +148,12 @@ namespace edm {
     provBranch_->SetAddress(&pEvProv);
     auxBranch_->GetEntry(entryNumber());
     provBranch_->GetEntry(entryNumber());
-    eventID_ = evAux.id_;
+    eventID_ = evAux.id();
     // We're not done ... so prepare the EventPrincipal
     boost::shared_ptr<DelayedReader> store_(new RootDelayedReader(entryNumber(), branches_, filePtr_));
-    std::auto_ptr<EventPrincipal> thisEvent(new EventPrincipal(evAux.id(), evAux.time(), pReg, evAux.processHistoryHash_, store_));
+    std::auto_ptr<EventPrincipal> thisEvent(new EventPrincipal(
+		evAux.id(), evAux.time(), pReg, evAux.luminosityBlockID(),
+		evAux.processHistoryHash_, store_));
     // Loop over provenance
     std::vector<BranchEntryDescription>::iterator pit = evProv.data_.begin();
     std::vector<BranchEntryDescription>::iterator pitEnd = evProv.data_.end();
