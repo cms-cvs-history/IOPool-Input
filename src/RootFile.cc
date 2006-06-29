@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.20.2.3 2006/06/27 23:25:05 wmtan Exp $
+$Id: RootFile.cc,v 1.20.2.4 2006/06/28 16:35:21 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "IOPool/Input/src/RootFile.h"
@@ -102,7 +102,7 @@ namespace edm {
   }
 
   void
-  RootFile::fillParameterSetRegistry(pset::Registry & psetRegistry) const {
+  RootFile::fillParameterSetRegistry(edm::pset::Registry & psetRegistry) const {
     ParameterSetID psetID;
     ParameterSetBlob psetBlob;
     ParameterSetID *psetIDptr = &psetID;
@@ -116,7 +116,7 @@ namespace edm {
     parameterSetTree->SetBranchAddress(poolNames::parameterSetBranchName().c_str(), &psetBlobptr);
     for (int i = 0; i < nEntries; ++i) {
       parameterSetTree->GetEntry(i);
-      psetRegistry.insertParameterSet(ParameterSet(psetBlob.pset_));
+      psetRegistry.insertMapped(ParameterSet(psetBlob.pset_));
     }
   }
 

@@ -5,7 +5,7 @@
 
 RootFile.h // used by ROOT input sources
 
-$Id: RootFile.h,v 1.8 2006/06/06 21:23:39 wmtan Exp $
+$Id: RootFile.h,v 1.9 2006/06/16 20:26:11 wmtan Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -15,6 +15,7 @@ $Id: RootFile.h,v 1.8 2006/06/06 21:23:39 wmtan Exp $
 #include "IOPool/Input/src/Inputfwd.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
+#include "FWCore/ParameterSet/interface/Registry.h"
 #include "TBranch.h"
 #include "TFile.h"
 
@@ -40,7 +41,7 @@ namespace edm {
     std::auto_ptr<EventPrincipal> read(ProductRegistry const& pReg);
     ProductRegistry const& productRegistry() const {return *productRegistry_;}
     boost::shared_ptr<ProductRegistry> productRegistrySharedPtr() const {return productRegistry_;}
-    void fillParameterSetRegistry(pset::Registry & psetRegistry) const;
+    void fillParameterSetRegistry(edm::pset::Registry & psetRegistry) const;
     TBranch *auxBranch() {return auxBranch_;}
     TBranch *provBranch() {return provBranch_;}
     EventID & eventID() {return eventID_;}
