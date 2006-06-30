@@ -5,7 +5,7 @@
 
 RootFile.h // used by ROOT input sources
 
-$Id: RootFile.h,v 1.9 2006/06/16 20:26:11 wmtan Exp $
+$Id: RootFile.h,v 1.9.2.1 2006/06/29 19:13:59 paterno Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -16,6 +16,7 @@ $Id: RootFile.h,v 1.9 2006/06/16 20:26:11 wmtan Exp $
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
 #include "FWCore/ParameterSet/interface/Registry.h"
+#include "DataFormats/Common/interface/BranchEntryDescription.h"
 #include "TBranch.h"
 #include "TFile.h"
 
@@ -41,9 +42,7 @@ namespace edm {
     std::auto_ptr<EventPrincipal> read(ProductRegistry const& pReg);
     ProductRegistry const& productRegistry() const {return *productRegistry_;}
     boost::shared_ptr<ProductRegistry> productRegistrySharedPtr() const {return productRegistry_;}
-    void fillParameterSetRegistry(edm::pset::Registry & psetRegistry) const;
     TBranch *auxBranch() {return auxBranch_;}
-    TBranch *provBranch() {return provBranch_;}
     EventID & eventID() {return eventID_;}
     EntryNumber const& entryNumber() const {return entryNumber_;}
     EntryNumber const& entries() const {return entries_;}
@@ -56,6 +55,8 @@ namespace edm {
     std::string const file_;
     std::string const catalog_;
     std::vector<std::string> branchNames_;
+    std::vector<BranchEntryDescription> eventProvenance_;
+    std::vector<BranchEntryDescription *> eventProvenancePtrs_;
     JobReport::Token reportToken_;
     EventID eventID_;
     EntryNumber entryNumber_;
@@ -67,8 +68,8 @@ namespace edm {
 // Root owns them and uses bare pointers internally.
 // Therefore,using shared pointers here will do no good.
     TTree *eventTree_;
+    TTree *eventMetaTree_;
     TBranch *auxBranch_;
-    TBranch *provBranch_;
     boost::shared_ptr<TFile> filePtr_;
   }; // class RootFile
 
