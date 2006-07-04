@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.20.2.5 2006/06/29 19:13:59 paterno Exp $
+$Id: RootFile.cc,v 1.20.2.6 2006/06/30 19:25:21 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "IOPool/Input/src/RootFile.h"
@@ -15,7 +15,7 @@ $Id: RootFile.cc,v 1.20.2.5 2006/06/29 19:13:59 paterno Exp $
 #include "DataFormats/Common/interface/ParameterSetBlob.h"
 #include "DataFormats/Common/interface/Wrapper.h"
 #include "FWCore/Framework/interface/ModuleDescriptionRegistry.h"
-#include "FWCore/Framework/interface/ProcessNameListRegistry.h"
+#include "FWCore/Framework/interface/ProcessHistoryRegistry.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -48,10 +48,10 @@ namespace edm {
     ProductRegistry *ppReg = productRegistry_.get();
     typedef std::map<ParameterSetID, ParameterSetBlob> PsetMap;
     PsetMap psetMap;
-    ProcessNameListMap pHistMap;
+    ProcessHistoryMap pHistMap;
     ModuleDescriptionMap mdMap;
     PsetMap *psetMapPtr = &psetMap;
-    ProcessNameListMap *pHistMapPtr = &pHistMap;
+    ProcessHistoryMap *pHistMapPtr = &pHistMap;
     ModuleDescriptionMap *mdMapPtr = &mdMap;
 
     // Read the metadata tree.
@@ -71,8 +71,8 @@ namespace edm {
     for (PsetMap::const_iterator i = psetMap.begin(); i != psetMap.end(); ++i) {
       psetRegistry.insertMapped(ParameterSet(i->second.pset_));
     } 
-    ProcessNameListRegistry & processNameListRegistry = *ProcessNameListRegistry::instance();
-    for (ProcessNameListMap::const_iterator j = pHistMap.begin(); j != pHistMap.end(); ++j) {
+    ProcessHistoryRegistry & processNameListRegistry = *ProcessHistoryRegistry::instance();
+    for (ProcessHistoryMap::const_iterator j = pHistMap.begin(); j != pHistMap.end(); ++j) {
       processNameListRegistry.insertMapped(j->second);
     } 
     ModuleDescriptionRegistry & moduleDescriptionRegistry = *ModuleDescriptionRegistry::instance();
