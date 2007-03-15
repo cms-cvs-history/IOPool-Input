@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.54 2007/01/25 15:30:50 wmtan Exp $
+$Id: RootFile.cc,v 1.54.2.1 2007/03/13 21:36:00 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "IOPool/Input/src/RootFile.h"
@@ -219,11 +219,9 @@ namespace edm {
       runTree().fillAux<RunAux>(pRunAux);
       assert(runNumber == runAux.id());
     } else {
-      runAux.id_ = runNumber;
       LogInfo("RunNotFound")
         << "Run " << runNumber << " was not found in file " << file_ << "\n";
-      //throw cms::Exception("NotFound", "RootFile::readRun()")
-      //<< "Run " << runNumber << " was not found in file " << file_ << "\n";
+      return boost::shared_ptr<RunPrincipal const>(new RunPrincipal(runNumber, pReg, processConfiguration_));
     } 
     boost::shared_ptr<RunPrincipal> thisRun(new RunPrincipal(runNumber, pReg, processConfiguration_,
 		runAux.processHistoryID_, runTree().makeDelayedReader()));
@@ -252,12 +250,10 @@ namespace edm {
       assert(lumiID == lumiAux.id());
       assert(runNumber == lumiAux.runID());
     } else {
-      lumiAux.id_ = lumiID;
-      lumiAux.runID_ = runNumber;
       LogInfo("LumiNotFound")
         << "Lumi Block " << lumiID << " in Run " << runNumber << " was not found in file " << file_ << "\n";
-      //throw cms::Exception("NotFound", "RootFile::read()")
-      //<< "Lumi Block " << lumiID << " in Run " << runNumber << " was not found in file " << file_ << "\n";
+      return boost::shared_ptr<LuminosityBlockPrincipal const>(
+	new LuminosityBlockPrincipal(lumiID, pReg, runPrincipal, processConfiguration_));
     } 
     boost::shared_ptr<LuminosityBlockPrincipal> thisLumi(
 	new LuminosityBlockPrincipal(lumiID, pReg, runPrincipal, processConfiguration_,
