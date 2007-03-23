@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.54.2.1 2007/03/13 21:36:00 wmtan Exp $
+$Id: RootFile.cc,v 1.54.2.2 2007/03/15 23:21:52 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "IOPool/Input/src/RootFile.h"
@@ -219,8 +219,6 @@ namespace edm {
       runTree().fillAux<RunAux>(pRunAux);
       assert(runNumber == runAux.id());
     } else {
-      LogInfo("RunNotFound")
-        << "Run " << runNumber << " was not found in file " << file_ << "\n";
       return boost::shared_ptr<RunPrincipal const>(new RunPrincipal(runNumber, pReg, processConfiguration_));
     } 
     boost::shared_ptr<RunPrincipal> thisRun(new RunPrincipal(runNumber, pReg, processConfiguration_,
@@ -250,8 +248,6 @@ namespace edm {
       assert(lumiID == lumiAux.id());
       assert(runNumber == lumiAux.runID());
     } else {
-      LogInfo("LumiNotFound")
-        << "Lumi Block " << lumiID << " in Run " << runNumber << " was not found in file " << file_ << "\n";
       return boost::shared_ptr<LuminosityBlockPrincipal const>(
 	new LuminosityBlockPrincipal(lumiID, pReg, runPrincipal, processConfiguration_));
     } 
