@@ -5,7 +5,7 @@
 
 PoolSource: This is an InputSource
 
-$Id: PoolSource.h,v 1.29 2007/02/06 23:07:55 wmtan Exp $
+$Id: PoolSource.h,v 1.27.2.1 2007/02/13 17:52:36 wmtan Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -59,7 +59,6 @@ namespace edm {
 
     std::vector<FileCatalogItem>::const_iterator fileIter_;
     RootFileSharedPtr rootFile_;
-    RootFileSharedPtr origRootFile_;
     EntryNumber origEntryNumber_;
     BranchDescription::MatchMode matchMode_;
 

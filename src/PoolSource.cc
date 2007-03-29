@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: PoolSource.cc,v 1.43 2007/02/06 23:07:55 wmtan Exp $
+$Id: PoolSource.cc,v 1.38.2.1 2007/02/13 17:52:36 wmtan Exp $
 ----------------------------------------------------------------------*/
 #include "IOPool/Input/src/PoolSource.h"
 #include "IOPool/Input/src/RootFile.h"
@@ -22,7 +22,6 @@ namespace edm {
     VectorInputSource(pset, desc),
     fileIter_(fileCatalogItems().begin()),
     rootFile_(),
-    origRootFile_(),
     origEntryNumber_(),
     matchMode_(BranchDescription::Permissive),
     flatDistribution_(0),
@@ -78,7 +77,6 @@ namespace edm {
     if (eventsToSkip > 0) {
       skip(eventsToSkip);
     }
-    origRootFile_ = rootFile_;
     origEntryNumber_ = rootFile_->entryNumber();
   }
 
@@ -198,8 +196,8 @@ namespace edm {
   // Rewind to before the first event that was read.
   void
   PoolSource::rewind_() {
-    rootFile_ = origRootFile_;
-    rewindFile();
+    fileIter_ = fileCatalogItems().begin();
+    init(*fileIter_);
   }
 
   // Rewind to the beginning of the current file
