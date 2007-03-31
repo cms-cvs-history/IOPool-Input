@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.54.2.2 2007/03/15 23:21:52 wmtan Exp $
+$Id: RootFile.cc,v 1.54.2.3 2007/03/23 18:40:12 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "IOPool/Input/src/RootFile.h"
@@ -81,10 +81,6 @@ namespace edm {
       fileFormatVersion_.value_ = 0;
     }
     assert(eventTree().isValid());
-    if (fileFormatVersion_.value_ >= 2) {
-      assert(lumiTree().isValid());
-      assert(runTree().isValid());
-    }
 
     // freeze our temporary product registry
     tempReg.setFrozen();
