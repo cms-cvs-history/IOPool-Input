@@ -5,7 +5,7 @@
 
 RootFile.h // used by ROOT input sources
 
-$Id: RootFile.h,v 1.30 2007/07/26 23:43:54 wmtan Exp $
+$Id: RootFile.h,v 1.36 2007/10/08 21:39:23 wmtan Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -38,7 +38,7 @@ namespace edm {
 		      std::string const& logicalFileName = std::string());
     ~RootFile();
     void open();
-    void close();
+    void close(bool reallyClose);
     std::auto_ptr<EventPrincipal> readEvent(
 	boost::shared_ptr<ProductRegistry const> pReg,
 	boost::shared_ptr<LuminosityBlockPrincipal> lbp);
