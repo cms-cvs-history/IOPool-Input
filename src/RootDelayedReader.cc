@@ -1,9 +1,10 @@
 /*----------------------------------------------------------------------
-$Id: RootDelayedReader.cc,v 1.22 2008/02/12 22:52:32 wmtan Exp $
+$Id: RootDelayedReader.cc,v 1.23 2008/04/18 01:57:58 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootDelayedReader.h"
 #include "IOPool/Common/interface/RefStreamer.h"
+#include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "DataFormats/Provenance/interface/BranchEntryDescription.h"
 #include "DataFormats/Provenance/interface/EntryDescription.h"
 #include "DataFormats/Provenance/interface/EntryDescriptionID.h"
@@ -46,11 +47,12 @@ namespace edm {
   }
 
   std::auto_ptr<EntryDescription>
-  RootDelayedReader::getProvenance_(BranchKey const& k) const {
-    iterator iter = branchIter(k);
+  RootDelayedReader::getProvenance_(BranchDescription const& desc) const {
+    BranchKey bk(desc);
+    iterator iter = branchIter(bk);
     if (!found(iter)) {
       assert(nextReader_);
-      return nextReader_->getProvenance(k);
+      return nextReader_->getProvenance(desc);
     }
     TBranch *br = getProvenanceBranch(iter);
 
@@ -70,11 +72,18 @@ namespace edm {
     br->SetAddress(&phash);
     br->GetEntry(entryNumber_);
     std::auto_ptr<EntryDescription> result(new EntryDescription);
-    if (!EntryDescriptionRegistry::instance()->getMapped(hash, *result))
+    if (!EntryDescriptionRegistry::instance()->getMapped(hash, *result)) {
       throw edm::Exception(errors::EventCorruption)
 	<< "Could not find EntryDescriptionID "
 	<< hash
 	<< " in the EntryDescriptionRegistry read from the input file";
+    }
+    if (fileFormatVersion_.value_ <= 7) {
+      assert(!result->productID_.isValid());
+      result->productID_ = desc.productID();
+      EntryDescriptionRegistry::instance()->insertMapped(*result);
+    }
+    assert(result->productID_.isValid());
     br->SetAddress(0);
     return result;
   }

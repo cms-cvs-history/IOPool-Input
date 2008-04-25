@@ -5,7 +5,7 @@
 
 RootDelayedReader.h // used by ROOT input sources
 
-$Id: RootDelayedReader.h,v 1.15 2008/02/01 20:23:15 wmtan Exp $
+$Id: RootDelayedReader.h,v 1.16 2008/02/06 06:26:53 wmtan Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -42,7 +42,7 @@ namespace edm {
 
   private:
     virtual std::auto_ptr<EDProduct> getProduct_(BranchKey const& k, EDProductGetter const* ep) const;
-    virtual std::auto_ptr<EntryDescription> getProvenance_(BranchKey const& k) const;
+    virtual std::auto_ptr<EntryDescription> getProvenance_(BranchDescription const& desc) const;
     virtual void mergeReaders_(boost::shared_ptr<DelayedReader> other) {nextReader_ = other;}
     BranchMap const& branches() const {return *branches_;}
     iterator branchIter(BranchKey const& k) const {return branches().find(k);}

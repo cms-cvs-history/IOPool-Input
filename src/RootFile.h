@@ -5,7 +5,7 @@
 
 RootFile.h // used by ROOT input sources
 
-$Id: RootFile.h,v 1.56 2008/04/09 23:00:24 wmtan Exp $
+$Id: RootFile.h,v 1.57 2008/04/16 22:02:32 wdd Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -115,7 +115,7 @@ namespace edm {
     void overrideRunNumber(LuminosityBlockID & id);
     void overrideRunNumber(EventID & id, bool isRealData);
     std::string const& newBranchToOldBranch(std::string const& newBranch) const;
-    void readEventDescriptionTree();
+    void readEntryDescriptionTree();
     void readEventHistoryTree();
 
     std::string const file_;

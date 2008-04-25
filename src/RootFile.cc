@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.132 2008/04/11 00:36:28 wmtan Exp $
+$Id: RootFile.cc,v 1.133 2008/04/16 22:02:32 wdd Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootFile.h"
@@ -141,7 +141,7 @@ namespace edm {
 
     metaDataTree->GetEntry(0);
 
-    readEventDescriptionTree();
+    readEntryDescriptionTree();
 
     validateFile();
     fileIndexIter_ = fileIndexBegin_ = fileIndex_.begin();
@@ -230,7 +230,7 @@ namespace edm {
   }
 
   void
-  RootFile::readEventDescriptionTree()
+  RootFile::readEntryDescriptionTree()
   { 
     if (fileFormatVersion_.value_ < 6) return; 
     TTree* entryDescriptionTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::entryDescriptionTreeName().c_str()));
