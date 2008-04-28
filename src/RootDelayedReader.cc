@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootDelayedReader.cc,v 1.23 2008/04/18 01:57:58 wmtan Exp $
+$Id: RootDelayedReader.cc,v 1.23.2.1 2008/04/25 17:21:51 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootDelayedReader.h"
@@ -80,7 +80,7 @@ namespace edm {
     }
     if (fileFormatVersion_.value_ <= 7) {
       assert(!result->productID_.isValid());
-      result->productID_ = desc.productID();
+      result->productID_ = desc.oldProductID();
       EntryDescriptionRegistry::instance()->insertMapped(*result);
     }
     assert(result->productID_.isValid());

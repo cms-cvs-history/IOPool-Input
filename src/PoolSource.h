@@ -5,7 +5,7 @@
 
 PoolSource: This is an InputSource
 
-$Id: PoolSource.h,v 1.52 2008/02/22 19:29:34 wmtan Exp $
+$Id: PoolSource.h,v 1.53 2008/02/28 20:54:43 wmtan Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -18,7 +18,7 @@ $Id: PoolSource.h,v 1.52 2008/02/22 19:29:34 wmtan Exp $
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Sources/interface/VectorInputSource.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
-#include "DataFormats/Provenance/interface/ProductID.h"
+#include "DataFormats/Provenance/interface/BranchID.h"
 
 #include "boost/scoped_ptr.hpp"
 #include "boost/utility.hpp"
@@ -53,7 +53,7 @@ namespace edm {
 
     boost::scoped_ptr<RootInputFileSequence> primaryFileSequence_;
     boost::scoped_ptr<RootInputFileSequence> secondaryFileSequence_;
-    std::vector<ProductID> productIDsToReplace_;
+    std::vector<BranchID> branchIDsToReplace_;
   }; // class PoolSource
   typedef PoolSource PoolRASource;
 }
