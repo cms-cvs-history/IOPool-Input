@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootInputFileSequence.cc,v 1.14 2008/04/16 22:02:32 wdd Exp $
+$Id: RootInputFileSequence.cc,v 1.15 2008/04/16 23:31:37 wmtan Exp $
 ----------------------------------------------------------------------*/
 #include "RootInputFileSequence.h"
 #include "PoolSource.h"
@@ -110,6 +110,12 @@ namespace edm {
     if (!rootFile_) {
       return boost::shared_ptr<FileBlock>(new FileBlock);
     }
+    if (primary()) {
+      productRegistry()->setProductIDs(rootFile_->productRegistry()->nextID());
+      if (rootFile_->productRegistry()->nextID() > productRegistry()->nextID()) {
+        productRegistryUpdate().setNextID(rootFile_->productRegistry()->nextID());
+      }
+    }
     return rootFile_->createFileBlock();
   }
 
@@ -148,9 +154,6 @@ namespace edm {
   }
 
   void RootInputFileSequence::updateProductRegistry() const {
-    if (rootFile_->productRegistry()->nextID() > productRegistry()->nextID()) {
-      productRegistryUpdate().setNextID(rootFile_->productRegistry()->nextID());
-    }
     ProductRegistry::ProductList const& prodList = rootFile_->productRegistry()->productList();
     for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end();
 	it != itEnd; ++it) {
