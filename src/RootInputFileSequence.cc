@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootInputFileSequence.cc,v 1.15 2008/04/16 23:31:37 wmtan Exp $
+$Id: RootInputFileSequence.cc,v 1.15.2.1 2008/05/01 23:54:11 wmtan Exp $
 ----------------------------------------------------------------------*/
 #include "RootInputFileSequence.h"
 #include "PoolSource.h"
@@ -111,7 +111,7 @@ namespace edm {
       return boost::shared_ptr<FileBlock>(new FileBlock);
     }
     if (primary()) {
-      productRegistry()->setProductIDs(rootFile_->productRegistry()->nextID());
+      productRegistryUpdate().setProductIDs(rootFile_->productRegistry()->nextID());
       if (rootFile_->productRegistry()->nextID() > productRegistry()->nextID()) {
         productRegistryUpdate().setNextID(rootFile_->productRegistry()->nextID());
       }

@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootDelayedReader.cc,v 1.23.2.1 2008/04/25 17:21:51 wmtan Exp $
+$Id: RootDelayedReader.cc,v 1.23.2.2 2008/04/28 18:06:18 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootDelayedReader.h"
@@ -46,7 +46,7 @@ namespace edm {
     return p;
   }
 
-  std::auto_ptr<EntryDescription>
+  std::auto_ptr<Provenance>
   RootDelayedReader::getProvenance_(BranchDescription const& desc) const {
     BranchKey bk(desc);
     iterator iter = branchIter(bk);

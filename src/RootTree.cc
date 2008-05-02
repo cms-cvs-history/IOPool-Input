@@ -60,8 +60,8 @@ namespace edm {
 		      BranchDescription const& prod) {
       assert(isValid());
       prod.init();
-      prod.provenancePresent_ = (metaTree_->GetBranch(prod.branchName().c_str()) != 0);
-      prod.present_ = (tree_->GetBranch(prod.branchName().c_str()) != 0);
+      prod.setProvenancePresent(metaTree_->GetBranch(prod.branchName().c_str()) != 0);
+      prod.setPresent(tree_->GetBranch(prod.branchName().c_str()) != 0);
   }
 
   void
@@ -72,14 +72,14 @@ namespace edm {
       prod.init();
       //use the translated branch name 
       TBranch * provBranch = metaTree_->GetBranch(oldBranchName.c_str());
-      assert (prod.provenancePresent_ == (provBranch != 0));
+      assert (prod.provenancePresent() == (provBranch != 0));
       TBranch * branch = tree_->GetBranch(oldBranchName.c_str());
-      assert (prod.present_ == (branch != 0));
+      assert (prod.present() == (branch != 0));
       if (prod.provenancePresent()) {
         input::EventBranchInfo info = input::EventBranchInfo(ConstBranchDescription(prod));
         info.provenanceBranch_ = provBranch;
         info.productBranch_ = 0;
-	if (prod.present_) {
+	if (prod.present()) {
           info.productBranch_ = branch;
 	  //we want the new branch name for the JobReport
 	  branchNames_.push_back(prod.branchName());

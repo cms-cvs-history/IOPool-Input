@@ -5,18 +5,20 @@
 
 RootTree.h // used by ROOT input sources
 
-$Id: RootTree.h,v 1.23 2008/04/09 23:00:24 wmtan Exp $
+$Id: RootTree.h,v 1.24 2008/04/16 22:02:32 wdd Exp $
 
 ----------------------------------------------------------------------*/
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "boost/shared_ptr.hpp"
 
 #include "Inputfwd.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
+#include "DataFormats/Provenance/interface/ProductStatus.h"
 #include "TBranch.h"
 class TFile;
 class TTree;
@@ -74,8 +76,8 @@ namespace edm {
     EntryNumber entryNumber_;
     std::vector<std::string> branchNames_;
     boost::shared_ptr<BranchMap> branches_;
-    ProductStatusVector productStatuses_;
-    ProductStatusVector* pProductStatuses_;
+    std::vector<ProductStatus> productStatuses_;
+    std::vector<ProductStatus>* pProductStatuses_;
   };
 }
 #endif
