@@ -45,7 +45,7 @@ namespace edm {
     return p;
   }
 
-  std::auto_ptr<Provenance>
+  std::auto_ptr<BranchEnteyInfo>
   RootDelayedReader::getProvenance_(BranchDescription const& desc) const {
     BranchKey bk(desc);
     iterator iter = branchIter(bk);
