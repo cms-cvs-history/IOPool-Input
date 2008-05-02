@@ -5,8 +5,6 @@
 
 PoolSource: This is an InputSource
 
-$Id: PoolSource.h,v 1.53 2008/02/28 20:54:43 wmtan Exp $
-
 ----------------------------------------------------------------------*/
 
 #include <memory>

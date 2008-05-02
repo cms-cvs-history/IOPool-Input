@@ -5,8 +5,6 @@
 
 RootDelayedReader.h // used by ROOT input sources
 
-$Id: RootDelayedReader.h,v 1.16.2.1 2008/04/25 17:21:51 wmtan Exp $
-
 ----------------------------------------------------------------------*/
 
 #include <memory>

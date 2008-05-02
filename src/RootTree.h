@@ -5,8 +5,6 @@
 
 RootTree.h // used by ROOT input sources
 
-$Id: RootTree.h,v 1.24 2008/04/16 22:02:32 wdd Exp $
-
 ----------------------------------------------------------------------*/
 
 #include <memory>

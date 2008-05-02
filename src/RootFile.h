@@ -5,8 +5,6 @@
 
 RootFile.h // used by ROOT input sources
 
-$Id: RootFile.h,v 1.57 2008/04/16 22:02:32 wdd Exp $
-
 ----------------------------------------------------------------------*/
 
 #include <map>
