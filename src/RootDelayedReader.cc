@@ -45,7 +45,7 @@ namespace edm {
     return p;
   }
 
-  std::auto_ptr<BranchEnteyInfo>
+  std::auto_ptr<BranchEntryInfo>
   RootDelayedReader::getProvenance_(BranchDescription const& desc) const {
     BranchKey bk(desc);
     iterator iter = branchIter(bk);
@@ -63,7 +63,12 @@ namespace edm {
       std::auto_ptr<EntryDescription> result = pb->convertToEntryDescription();
       EntryDescriptionRegistry::instance()->insertMapped(*result);
       br->SetAddress(0);
-      return result;
+      std::auto_ptr<BranchEntryInfo> bei(
+	new BranchEntryInfo(desc.branchID(),
+			    pb->productID_,
+			    (pb->status_ == BranchEntryDescription::Success) ? productstatus::present() : productstatus::neverCreated(),
+			    boost::shared_ptr<EntryDescription>(result.release())));
+      return bei;
     }
 
     EntryDescriptionID hash;

@@ -260,7 +260,7 @@ namespace edm {
 
   bool
   RootFile::setIfFastClonable(int remainingEvents) const {
-    if (fileFormatVersion_.value_ < 3) return false; 
+    if (fileFormatVersion_.value_ < 8) return false; 
     if (!fileIndex_.eventsSorted()) return false; 
     if (!whichEventsToProcess_.empty()) return false; 
     if (eventsToSkip_ != 0) return false; 
@@ -548,7 +548,9 @@ namespace edm {
 
   void
   RootFile::fillEventAuxiliary() {
-    if (fileFormatVersion_.value_ >= 6) {
+    if (fileFormatVersion_.value_ >= 8) {
+      eventTree_.fillBranchEntryInfo();
+    } else if (fileFormatVersion_.value_ >= 6) {
       eventTree_.fillStatus();
     }
     if (fileFormatVersion_.value_ >= 3) {
@@ -601,7 +603,9 @@ namespace edm {
 
   void
   RootFile::fillLumiAuxiliary() {
-    if (fileFormatVersion_.value_ >= 6) {
+    if (fileFormatVersion_.value_ >= 8) {
+      lumiTree_.fillBranchEntryInfo();
+    } else if (fileFormatVersion_.value_ >= 6) {
       lumiTree_.fillStatus();
     }
     if (fileFormatVersion_.value_ >= 3) {
@@ -620,7 +624,9 @@ namespace edm {
 
   void
   RootFile::fillRunAuxiliary() {
-    if (fileFormatVersion_.value_ >= 6) {
+    if (fileFormatVersion_.value_ >= 8) {
+      runTree_.fillBranchEntryInfo();
+    } else if (fileFormatVersion_.value_ >= 6) {
       runTree_.fillStatus();
     }
     if (fileFormatVersion_.value_ >= 3) {

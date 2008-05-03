@@ -16,7 +16,7 @@ RootTree.h // used by ROOT input sources
 #include "Inputfwd.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
-#include "DataFormats/Provenance/interface/ProductStatus.h"
+#include "DataFormats/Provenance/interface/BranchEntryInfo.h"
 #include "TBranch.h"
 class TFile;
 class TTree;
@@ -51,14 +51,21 @@ namespace edm {
       auxBranch_->SetAddress(&pAux);
       auxBranch_->GetEntry(entryNumber_);
     }
-    void fillStatus() {
-      statusBranch_->SetAddress(&pProductStatuses_);
-      statusBranch_->GetEntry(entryNumber_);
+    void fillBranchEntryInfo() {
+      branchEntryInfoBranch_->SetAddress(&pBranchEntryInfoVector_);
+      branchEntryInfoBranch_->GetEntry(entryNumber_);
     }
     TTree const* tree() const {return tree_;}
     TTree const* metaTree() const {return metaTree_;}
     void setCacheSize(unsigned int cacheSize) const;
     void setTreeMaxVirtualSize(int treeMaxVirtualSize);
+
+    // below for backward compatibility
+    void fillStatus() {
+      statusBranch_->SetAddress(&pProductStatuses_);
+      statusBranch_->GetEntry(entryNumber_);
+    }
+
   private:
     boost::shared_ptr<TFile> filePtr_;
 // We use bare pointers for pointers to some ROOT entities.
@@ -66,16 +73,21 @@ namespace edm {
 // Therefore,using smart pointers here will do no good.
     TTree *const tree_;
     TTree *const metaTree_;
-    TTree *const infoTree_;
     BranchType branchType_;
     TBranch *const auxBranch_;
-    TBranch *const statusBranch_;
+    TBranch *const branchEntryInfoBranch_;
     EntryNumber entries_;
     EntryNumber entryNumber_;
     std::vector<std::string> branchNames_;
     boost::shared_ptr<BranchMap> branches_;
+    std::vector<BranchEntryInfo> branchEntryInfoVector_;
+    std::vector<BranchEntryInfo>* pBranchEntryInfoVector_;
+
+    // below for backward compatibility
     std::vector<ProductStatus> productStatuses_;
     std::vector<ProductStatus>* pProductStatuses_;
+    TTree *const infoTree_;
+    TBranch *const statusBranch_;
   };
 }
 #endif
