@@ -44,7 +44,8 @@ namespace edm {
     void setEntryNumber(EntryNumber theEntryNumber) {entryNumber_ = theEntryNumber;}
     std::vector<std::string> const& branchNames() const {return branchNames_;}
     void fillGroups(Principal& item);
-    boost::shared_ptr<DelayedReader> makeDelayedReader(FileFormatVersion const& fileFormatVersion) const;
+    boost::shared_ptr<DelayedReader> makeDelayedReader() const;
+    boost::shared_ptr<BranchMapper> makeBranchMapper();
     //TBranch *auxBranch() {return auxBranch_;}
     template <typename T>
     void fillAux(T *& pAux) const {
@@ -80,8 +81,8 @@ namespace edm {
     EntryNumber entryNumber_;
     std::vector<std::string> branchNames_;
     boost::shared_ptr<BranchMap> branches_;
-    std::vector<BranchEntryInfo> branchEntryInfoVector_;
-    std::vector<BranchEntryInfo>* pBranchEntryInfoVector_;
+    BranchEntryInfoVector branchEntryInfoVector_;
+    BranchEntryInfoVector* pBranchEntryInfoVector_;
 
     // below for backward compatibility
     std::vector<ProductStatus> productStatuses_;

@@ -2,8 +2,9 @@
 #include "RootDelayedReader.h"
 #include "FWCore/Framework/interface/Principal.h"
 #include "FWCore/Utilities/interface/WrappedClassName.h"
-#include "DataFormats/Provenance/interface/BranchKey.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
+#include "DataFormats/Provenance/interface/BranchKey.h"
+#include "DataFormats/Provenance/interface/BranchMapper.h"
 #include "DataFormats/Provenance/interface/ConstBranchDescription.h"
 #include "DataFormats/Provenance/interface/Provenance.h"
 #include "Rtypes.h"
@@ -62,8 +63,7 @@ namespace edm {
   }
 
   void
-  RootTree::setPresence(
-		      BranchDescription const& prod) {
+  RootTree::setPresence(BranchDescription const& prod) {
       assert(isValid());
       prod.init();
       prod.setPresent(tree_->GetBranch(prod.branchName().c_str()) != 0);
@@ -93,17 +93,31 @@ namespace edm {
   RootTree::fillGroups(Principal& item) {
     if (metaTree_ == 0 || metaTree_->GetNbranches() == 0) return;
     // Loop over provenance
-    BranchMap::const_iterator pit = branches_->begin(), pitEnd = branches_->end();
-    for (; pit != pitEnd; ++pit) {
-      std::auto_ptr<Provenance> prov(new Provenance(pit->second.branchDescription_));
-      item.addGroup(prov);
+    for (BranchMap::const_iterator pit = branches_->begin(), pitEnd = branches_->end(); pit != pitEnd; ++pit) {
+      item.addGroup(pit->second.branchDescription_);
     }
   }
 
   boost::shared_ptr<DelayedReader>
-  RootTree::makeDelayedReader(FileFormatVersion const& fileFormatVersion) const {
-    boost::shared_ptr<DelayedReader> store(new RootDelayedReader(entryNumber_, branches_, filePtr_, fileFormatVersion));
+  RootTree::makeDelayedReader() const {
+    boost::shared_ptr<DelayedReader> store(new RootDelayedReader(entryNumber_, branches_, filePtr_));
     return store;
+  }
+
+  boost::shared_ptr<BranchMapper>
+  RootTree::makeBranchMapper() {
+    boost::shared_ptr<BranchMapper> mapper(new BranchMapper);
+    if (branchEntryInfoBranch_) {
+      fillBranchEntryInfo();
+      for (BranchEntryInfoVector::const_iterator it = branchEntryInfoVector_.begin(), itEnd = branchEntryInfoVector_.end();
+	  it != itEnd; ++it) {
+	mapper->insert(*it);
+      }
+    } else if (statusBranch_) {
+      fillStatus();
+    } else {
+    }
+    return mapper;
   }
 
   void

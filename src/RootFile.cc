@@ -548,11 +548,6 @@ namespace edm {
 
   void
   RootFile::fillEventAuxiliary() {
-    if (fileFormatVersion_.value_ >= 8) {
-      eventTree_.fillBranchEntryInfo();
-    } else if (fileFormatVersion_.value_ >= 6) {
-      eventTree_.fillStatus();
-    }
     if (fileFormatVersion_.value_ >= 3) {
       EventAuxiliary *pEvAux = &eventAux_;
       eventTree_.fillAux<EventAuxiliary>(pEvAux);
@@ -592,7 +587,7 @@ namespace edm {
       if (!eventProcessHistoryIDs_.empty()) {
         if (eventProcessHistoryIter_->eventID_ != eventAux_.id()) {
           EventProcessHistoryID target(eventAux_.id(), ProcessHistoryID());
-          eventProcessHistoryIter_ = std::lower_bound(eventProcessHistoryIDs_.begin(), eventProcessHistoryIDs_.end(), target);	
+          eventProcessHistoryIter_ = lower_bound_all(eventProcessHistoryIDs_, target);	
           assert(eventProcessHistoryIter_->eventID_ == eventAux_.id());
         }
         eventAux_.processHistoryID_ = eventProcessHistoryIter_->processHistoryID_;
@@ -603,11 +598,6 @@ namespace edm {
 
   void
   RootFile::fillLumiAuxiliary() {
-    if (fileFormatVersion_.value_ >= 8) {
-      lumiTree_.fillBranchEntryInfo();
-    } else if (fileFormatVersion_.value_ >= 6) {
-      lumiTree_.fillStatus();
-    }
     if (fileFormatVersion_.value_ >= 3) {
       LuminosityBlockAuxiliary *pLumiAux = &lumiAux_;
       lumiTree_.fillAux<LuminosityBlockAuxiliary>(pLumiAux);
@@ -624,11 +614,6 @@ namespace edm {
 
   void
   RootFile::fillRunAuxiliary() {
-    if (fileFormatVersion_.value_ >= 8) {
-      runTree_.fillBranchEntryInfo();
-    } else if (fileFormatVersion_.value_ >= 6) {
-      runTree_.fillStatus();
-    }
     if (fileFormatVersion_.value_ >= 3) {
       RunAuxiliary *pRunAux = &runAux_;
       runTree_.fillAux<RunAuxiliary>(pRunAux);
@@ -728,7 +713,8 @@ namespace edm {
 		lbp,
 		processConfiguration_,
 		eventAux_.processHistoryID_,
-		eventTree_.makeDelayedReader(fileFormatVersion_)));
+		eventTree_.makeBranchMapper(),
+		eventTree_.makeDelayedReader()));
     thisEvent->setHistory(history_);
 
     // Create a group in the event for each product
@@ -785,7 +771,8 @@ namespace edm {
 			 pReg,
 			 processConfiguration_,
 			 runAux_.processHistoryID_,
-			 runTree_.makeDelayedReader(fileFormatVersion_)));
+			 runTree_.makeBranchMapper(),
+			 runTree_.makeDelayedReader()));
     // Create a group in the run for each product
     runTree_.fillGroups(thisRun->groupGetter());
     // Read in all the products now.
@@ -841,7 +828,8 @@ namespace edm {
 	new LuminosityBlockPrincipal(lumiAux_,
 				     pReg, rp, processConfiguration_,
 				     lumiAux_.processHistoryID_,
-				     lumiTree_.makeDelayedReader(fileFormatVersion_)));
+				     lumiTree_.makeBranchMapper(),
+				     lumiTree_.makeDelayedReader()));
     // Create a group in the lumi for each product
     lumiTree_.fillGroups(thisLumi->groupGetter());
     // Read in all the products now.
