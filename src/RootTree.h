@@ -17,9 +17,10 @@ RootTree.h // used by ROOT input sources
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
 #include "DataFormats/Provenance/interface/BranchEntryInfo.h"
+#include "DataFormats/Provenance/interface/BranchKey.h"
 #include "TBranch.h"
+#include "TTree.h"
 class TFile;
-class TTree;
 
 namespace edm {
 
@@ -43,7 +44,8 @@ namespace edm {
     EntryNumber const& entries() const {return entries_;}
     void setEntryNumber(EntryNumber theEntryNumber) {entryNumber_ = theEntryNumber;}
     std::vector<std::string> const& branchNames() const {return branchNames_;}
-    void fillGroups(Principal& item);
+    template <typename T>
+    void fillGroups(T& item);
     boost::shared_ptr<DelayedReader> makeDelayedReader() const;
     boost::shared_ptr<BranchMapper> makeBranchMapper();
     //TBranch *auxBranch() {return auxBranch_;}
@@ -90,5 +92,15 @@ namespace edm {
     TTree *const infoTree_;
     TBranch *const statusBranch_;
   };
+
+  template <typename T>
+  void
+  RootTree::fillGroups(T& item) {
+    if (metaTree_ == 0 || metaTree_->GetNbranches() == 0) return;
+    // Loop over provenance
+    for (BranchMap::const_iterator pit = branches_->begin(), pitEnd = branches_->end(); pit != pitEnd; ++pit) {
+      item.addGroup(pit->second.branchDescription_);
+    }
+  }
 }
 #endif

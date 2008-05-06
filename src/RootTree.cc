@@ -3,12 +3,10 @@
 #include "FWCore/Framework/interface/Principal.h"
 #include "FWCore/Utilities/interface/WrappedClassName.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
-#include "DataFormats/Provenance/interface/BranchKey.h"
 #include "DataFormats/Provenance/interface/BranchMapper.h"
 #include "DataFormats/Provenance/interface/ConstBranchDescription.h"
 #include "DataFormats/Provenance/interface/Provenance.h"
 #include "Rtypes.h"
-#include "TTree.h"
 #include "TFile.h"
 #include "TVirtualIndex.h"
 #include "TTreeIndex.h"
@@ -87,15 +85,6 @@ namespace edm {
       }
       branches_->insert(std::make_pair(key, info));
       info.provenanceBranch_ = metaTree_->GetBranch(oldBranchName.c_str());
-  }
-
-  void
-  RootTree::fillGroups(Principal& item) {
-    if (metaTree_ == 0 || metaTree_->GetNbranches() == 0) return;
-    // Loop over provenance
-    for (BranchMap::const_iterator pit = branches_->begin(), pitEnd = branches_->end(); pit != pitEnd; ++pit) {
-      item.addGroup(pit->second.branchDescription_);
-    }
   }
 
   boost::shared_ptr<DelayedReader>

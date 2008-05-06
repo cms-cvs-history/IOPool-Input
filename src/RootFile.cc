@@ -718,7 +718,7 @@ namespace edm {
     thisEvent->setHistory(history_);
 
     // Create a group in the event for each product
-    eventTree_.fillGroups(thisEvent->groupGetter());
+    eventTree_.fillGroups(*thisEvent);
     return thisEvent;
   }
 
@@ -774,7 +774,7 @@ namespace edm {
 			 runTree_.makeBranchMapper(),
 			 runTree_.makeDelayedReader()));
     // Create a group in the run for each product
-    runTree_.fillGroups(thisRun->groupGetter());
+    runTree_.fillGroups(*thisRun);
     // Read in all the products now.
     thisRun->readImmediate();
     ++fileIndexIter_;
@@ -831,7 +831,7 @@ namespace edm {
 				     lumiTree_.makeBranchMapper(),
 				     lumiTree_.makeDelayedReader()));
     // Create a group in the lumi for each product
-    lumiTree_.fillGroups(thisLumi->groupGetter());
+    lumiTree_.fillGroups(*thisLumi);
     // Read in all the products now.
     thisLumi->readImmediate();
     ++fileIndexIter_;
