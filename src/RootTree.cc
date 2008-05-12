@@ -3,7 +3,6 @@
 #include "FWCore/Framework/interface/Principal.h"
 #include "FWCore/Utilities/interface/WrappedClassName.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
-#include "DataFormats/Provenance/interface/BranchMapper.h"
 #include "DataFormats/Provenance/interface/ConstBranchDescription.h"
 #include "DataFormats/Provenance/interface/Provenance.h"
 #include "Rtypes.h"
@@ -23,7 +22,7 @@ namespace edm {
       }
       return branch;
     }
-    TBranch * getBranchEntryInfoBranch(TTree * tree, BranchType const& branchType) {
+    TBranch * getEventEntryInfoBranch(TTree * tree, BranchType const& branchType) {
       TBranch *branch = tree->GetBranch(BranchTypeToBranchEntryInfoBranchName(branchType).c_str());
       return branch;
     }
@@ -38,13 +37,11 @@ namespace edm {
     metaTree_(dynamic_cast<TTree *>(filePtr_.get() != 0 ? filePtr->Get(BranchTypeToMetaDataTreeName(branchType).c_str()) : 0)),
     branchType_(branchType),
     auxBranch_(tree_ ? getAuxiliaryBranch(tree_, branchType_) : 0),
-    branchEntryInfoBranch_(metaTree_ ? getBranchEntryInfoBranch(metaTree_, branchType_) : 0),
+    branchEntryInfoBranch_(metaTree_ ? getEventEntryInfoBranch(metaTree_, branchType_) : 0),
     entries_(tree_ ? tree_->GetEntries() : 0),
     entryNumber_(-1),
     branchNames_(),
     branches_(new BranchMap),
-    branchEntryInfoVector_(),
-    pBranchEntryInfoVector_(&branchEntryInfoVector_),
     productStatuses_(),
     pProductStatuses_(&productStatuses_),
     infoTree_(dynamic_cast<TTree *>(filePtr_.get() != 0 ? filePtr->Get(BranchTypeToInfoTreeName(branchType).c_str()) : 0)),
@@ -91,22 +88,6 @@ namespace edm {
   RootTree::makeDelayedReader() const {
     boost::shared_ptr<DelayedReader> store(new RootDelayedReader(entryNumber_, branches_, filePtr_));
     return store;
-  }
-
-  boost::shared_ptr<BranchMapper>
-  RootTree::makeBranchMapper() {
-    boost::shared_ptr<BranchMapper> mapper(new BranchMapper);
-    if (branchEntryInfoBranch_) {
-      fillBranchEntryInfo();
-      for (BranchEntryInfoVector::const_iterator it = branchEntryInfoVector_.begin(), itEnd = branchEntryInfoVector_.end();
-	  it != itEnd; ++it) {
-	mapper->insert(*it);
-      }
-    } else if (statusBranch_) {
-      fillStatus();
-    } else {
-    }
-    return mapper;
   }
 
   void

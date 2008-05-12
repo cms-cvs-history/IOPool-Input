@@ -26,6 +26,8 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/FileID.h"
 #include "DataFormats/Provenance/interface/FileIndex.h"
 #include "DataFormats/Provenance/interface/History.h"
+#include "DataFormats/Provenance/interface/EventEntryInfo.h"
+#include "DataFormats/Provenance/interface/RunLumiEntryInfo.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
 class TFile;
@@ -143,6 +145,12 @@ namespace edm {
     EventAuxiliary eventAux_;
     LuminosityBlockAuxiliary lumiAux_;
     RunAuxiliary runAux_;
+    EventEntryInfoVector            eventEntryInfoVector_;
+    LumiEntryInfoVector	            lumiEntryInfoVector_;
+    RunEntryInfoVector              runEntryInfoVector_;
+    EventEntryInfoVector *          pEventEntryInfoVector_;
+    LumiEntryInfoVector *           pLumiEntryInfoVector_;
+    RunEntryInfoVector *            pRunEntryInfoVector_;
     RootTree eventTree_;
     RootTree lumiTree_;
     RootTree runTree_;
