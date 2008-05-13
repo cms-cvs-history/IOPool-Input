@@ -5,7 +5,7 @@
 
 RootFile.h // used by ROOT input sources
 
-$Id: RootFile.h,v 1.56 2008/04/09 23:00:24 wmtan Exp $
+$Id: RootFile.h,v 1.57 2008/04/16 22:02:32 wdd Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -55,7 +55,8 @@ namespace edm {
              int treeMaxVirtualSize,
 	     int forcedRunOffset,
 	     std::vector<EventID> const& whichEventsToProcess,
-             bool dropMetaData);
+             bool dropMetaData,
+             bool csa08Kludge);
     void reportOpened();
     void close(bool reallyClose);
     std::auto_ptr<EventPrincipal> readCurrentEvent(

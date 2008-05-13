@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.132 2008/04/11 00:36:28 wmtan Exp $
+$Id: RootFile.cc,v 1.133 2008/04/16 22:02:32 wdd Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootFile.h"
@@ -53,7 +53,8 @@ namespace edm {
                      int treeMaxVirtualSize,
 		     int forcedRunOffset,
 		     std::vector<EventID> const& whichEventsToProcess,
-		     bool dropMetaData) :
+		     bool dropMetaData,
+                     bool csa08Kludge) :
       file_(fileName),
       logicalFile_(logicalFileName),
       catalog_(catalogName),
@@ -141,7 +142,9 @@ namespace edm {
 
     metaDataTree->GetEntry(0);
 
-    readEventDescriptionTree();
+    if (!csa08Kludge) { 
+      readEventDescriptionTree();
+    }
 
     validateFile();
     fileIndexIter_ = fileIndexBegin_ = fileIndex_.begin();

@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootInputFileSequence.cc,v 1.14 2008/04/16 22:02:32 wdd Exp $
+$Id: RootInputFileSequence.cc,v 1.15 2008/04/16 23:31:37 wmtan Exp $
 ----------------------------------------------------------------------*/
 #include "RootInputFileSequence.h"
 #include "PoolSource.h"
@@ -50,7 +50,8 @@ namespace edm {
     setRun_(pset.getUntrackedParameter<unsigned int>("setRunNumber", 0U)),
     dropMetaData_(pset.getUntrackedParameter<bool>("dropMetaData", false)),
     primarySequence_(primarySequence),
-    randomAccess_(false) {
+    randomAccess_(false),
+    csa08Kludge_(pset.getUntrackedParameter<bool>("useCSA08Kludge", false)) {
 
     sort_all(eventsToProcess_);
     std::string matchMode = pset.getUntrackedParameter<std::string>("fileMatchMode", std::string("permissive"));
@@ -136,7 +137,8 @@ namespace edm {
       rootFile_ = RootFileSharedPtr(new RootFile(fileIter_->fileName(), catalog_.url(),
 	  processConfiguration(), fileIter_->logicalFileName(), filePtr,
 	  startAtRun_, startAtLumi_, startAtEvent_, eventsToSkip_, whichLumisToSkip_,
-	  remainingEvents(), treeCacheSize_, treeMaxVirtualSize_, forcedRunOffset_, eventsToProcess_, dropMetaData_));
+	  remainingEvents(), treeCacheSize_, treeMaxVirtualSize_, forcedRunOffset_, eventsToProcess_,
+          dropMetaData_, csa08Kludge_));
       fileIndexes_[fileIter_ - fileIterBegin_] = rootFile_->fileIndexSharedPtr();
     } else {
       if (!skipBadFiles) {

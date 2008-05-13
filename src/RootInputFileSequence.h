@@ -5,7 +5,7 @@
 
 RootInputFileSequence: This is an InputSource
 
-$Id: RootInputFileSequence.h,v 1.10 2008/04/16 22:02:32 wdd Exp $
+$Id: RootInputFileSequence.h,v 1.11 2008/04/16 23:31:37 wmtan Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -100,6 +100,7 @@ namespace edm {
     bool dropMetaData_;
     bool primarySequence_;
     bool randomAccess_;
+    bool csa08Kludge_;
   }; // class RootInputFileSequence
 }
 #endif
