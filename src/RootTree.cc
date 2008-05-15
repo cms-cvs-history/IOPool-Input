@@ -102,6 +102,11 @@ namespace edm {
     } else {
       for (; pit != pitEnd; ++pit) {
         ConstBranchDescription const& bd = pit->second.branchDescription_;
+	if (bd.productID().id() == 1U &&
+	   productstatus::invalid(productStatuses_[0]) &&
+	   bd.friendlyClassName() == std::string("FEDRawDataCollection")) {
+	  productStatuses_[0] = productstatus::present();
+	}
         item.addGroup(bd, productStatuses_[bd.productID().id() - 1]);
       }
     }
