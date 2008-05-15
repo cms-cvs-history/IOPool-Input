@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.133 2008/04/16 22:02:32 wdd Exp $
+$Id: RootFile.cc,v 1.133.4.1 2008/05/13 22:25:53 wdd Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootFile.h"
@@ -159,6 +159,10 @@ namespace edm {
     for (ProductRegistry::ProductList::const_iterator it = pList.begin(), itEnd = pList.end();
         it != itEnd; ++it) {
       BranchDescription const& prod = it->second;
+      if (prod.friendlyClassName() == std::string("FEDRawDataCollection")) {
+	BranchDescription *p = const_cast<BranchDescription *>(&it->second);
+	p->productID_.id_ = 1U;
+      }
       treePointers_[prod.branchType()]->setPresence(prod);
     }
 
