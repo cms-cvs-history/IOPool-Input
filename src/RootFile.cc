@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootFile.cc,v 1.133.4.2 2008/05/15 04:55:55 wmtan Exp $
+$Id: RootFile.cc,v 1.133.4.3 2008/05/15 18:35:06 wmtan Exp $
 ----------------------------------------------------------------------*/
 
 #include "RootFile.h"
@@ -159,7 +159,10 @@ namespace edm {
     for (ProductRegistry::ProductList::const_iterator it = pList.begin(), itEnd = pList.end();
         it != itEnd; ++it) {
       BranchDescription const& prod = it->second;
-      if (prod.friendlyClassName() == std::string("FEDRawDataCollection") && prod.moduleLabel() == std::string("source")) {
+      // This is a KLUDGE for 2_0_X only to facilitate merging.
+      if (fileFormatVersion_.value_ == 7 &&
+          prod.friendlyClassName() == std::string("FEDRawDataCollection") &&
+          prod.moduleLabel() == std::string("source")) {
 	BranchDescription *p = const_cast<BranchDescription *>(&it->second);
 	p->productID_.id_ = 1U;
       }
