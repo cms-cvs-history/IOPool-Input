@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------
-$Id: RootInputFileSequence.cc,v 1.15 2008/04/16 23:31:37 wmtan Exp $
+$Id: RootInputFileSequence.cc,v 1.15.4.1 2008/05/13 22:25:53 wdd Exp $
 ----------------------------------------------------------------------*/
 #include "RootInputFileSequence.h"
 #include "PoolSource.h"
@@ -70,7 +70,7 @@ namespace edm {
             << "'setRunNumber' was " << setRun_ <<", while the first run was "
             << setRun_ - forcedRunOffset_ << ".\n";
         }
-        if (primarySequence_) updateProductRegistry();
+        updateProductRegistry();
       }
     } else {
       Service<RandomNumberGenerator> rng;
