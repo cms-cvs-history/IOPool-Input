@@ -14,6 +14,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Utilities/interface/RandomNumberGenerator.h"
 #include "FWCore/Utilities/interface/Algorithms.h"
+#include "Utilities/StorageFactory/interface/StorageFactory.h"
 
 #include "CLHEP/Random/RandFlat.h"
 #include "TTree.h"
@@ -52,6 +53,10 @@ namespace edm {
     primarySequence_(primarySequence),
     randomAccess_(false),
     wantedBranches_() {
+
+    StorageFactory *factory = StorageFactory::get();
+    for(fileIter_ = fileIterBegin_; fileIter_ != fileIterEnd_; ++fileIter_)
+      factory->stagein(fileIter_->fileName());
 
     sort_all(eventsToProcess_);
     std::string matchMode = pset.getUntrackedParameter<std::string>("fileMatchMode", std::string("permissive"));
