@@ -102,8 +102,8 @@ namespace edm {
       forcedRunOffset_(forcedRunOffset),
       newBranchToOldBranch_(),
       eventHistoryTree_(0),
+      history_(new History),
       branchChildren_(new BranchChildren),
-      nextIDfixup_(false),
       duplicateChecker_(duplicateChecker) {
     eventTree_.setCacheSize(treeCacheSize);
 
@@ -204,7 +204,6 @@ namespace edm {
 	}
       }
       // freeze the product registry
-      newReg->setNextID(tempReg.nextID());
       newReg->setFrozen();
       productRegistry_.reset(newReg.release());
       // This is the selector for drop on input.
@@ -700,14 +699,13 @@ namespace edm {
     // data tree, this is too hard to do in this first version.
 
     if (fileFormatVersion_.value_ >= 7) {
-      History* pHistory = &history_;
+      History* pHistory = history_.get();
       TBranch* eventHistoryBranch = eventHistoryTree_->GetBranch(poolNames::eventHistoryBranchName().c_str());
       if (!eventHistoryBranch)
 	throw edm::Exception(edm::errors::EventCorruption)
 	  << "Failed to find history branch in event history tree";
       eventHistoryBranch->SetAddress(&pHistory);
       input::getEntry(eventHistoryTree_, eventTree_.entryNumber());
-      eventAux_.processHistoryID_ = history_.processHistoryID();
     } else {
       // for backward compatibility.  If we could figure out how many
       // processes this event has been through, we should fill in
@@ -718,7 +716,7 @@ namespace edm {
           eventProcessHistoryIter_ = lower_bound_all(eventProcessHistoryIDs_, target);	
           assert(eventProcessHistoryIter_->eventID_ == eventAux_.id());
         }
-        eventAux_.processHistoryID_ = eventProcessHistoryIter_->processHistoryID_;
+	history_->processHistoryID() = eventProcessHistoryIter_->processHistoryID_;
         ++eventProcessHistoryIter_;
       }
     }
@@ -826,21 +824,9 @@ namespace edm {
 		eventAux_,
 		pReg,
 		processConfiguration_,
-		eventAux_.processHistoryID_,
+		history_,
 		makeBranchMapper<EventEntryInfo>(eventTree_, InEvent),
 		eventTree_.makeDelayedReader()));
-    thisEvent->setHistory(history_);
-    // The following block handles files originating from the repacker where the max product ID was not
-    // set correctly in the registry.
-    if (nextIDfixup_) {
-      ProductRegistry* pr = const_cast<ProductRegistry*>(pReg.get());
-      pr->setProductIDs(productRegistry_->nextID());
-      nextIDfixup_ = false;
-      edm::LogError("MetaDataError")
-           << "'nextID' for the ProductRegistry in the input file is less than the largest\n"
-			     << "ProductID used in a previous process.\n"
-			     << "Updating the ProductRegistry to attempt to correct the problem\n";
-    }
 
     // Create a group in the event for each product
     eventTree_.fillGroups(*thisEvent);
@@ -897,7 +883,6 @@ namespace edm {
 	new RunPrincipal(runAux_,
 			 pReg,
 			 processConfiguration_,
-			 runAux_.processHistoryID_,
 			 makeBranchMapper<RunEntryInfo>(runTree_, InRun),
 			 runTree_.makeDelayedReader()));
     // Create a group in the run for each product
@@ -955,7 +940,6 @@ namespace edm {
     boost::shared_ptr<LuminosityBlockPrincipal> thisLumi(
 	new LuminosityBlockPrincipal(lumiAux_,
 				     pReg, processConfiguration_,
-				     lumiAux_.processHistoryID_,
 				     makeBranchMapper<LumiEntryInfo>(lumiTree_, InLumi),
 				     lumiTree_.makeDelayedReader()));
     // Create a group in the lumi for each product

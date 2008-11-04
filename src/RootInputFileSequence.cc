@@ -130,10 +130,7 @@ namespace edm {
       return boost::shared_ptr<FileBlock>(new FileBlock);
     }
     if (primary()) {
-      productRegistryUpdate().setProductIDs(rootFile_->productRegistry()->nextID());
-      if (rootFile_->productRegistry()->nextID() > productRegistry()->nextID()) {
-        productRegistryUpdate().setNextID(rootFile_->productRegistry()->nextID());
-      }
+      productRegistryUpdate().setProductIDs();
     }
     return rootFile_->createFileBlock();
   }

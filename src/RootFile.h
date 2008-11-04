@@ -181,9 +181,8 @@ namespace edm {
     int forcedRunOffset_;
     std::map<std::string, std::string> newBranchToOldBranch_;
     TTree * eventHistoryTree_;
-    History history_;    
+    boost::shared_ptr<History> history_;    
     boost::shared_ptr<BranchChildren> branchChildren_;
-    mutable bool nextIDfixup_;
     boost::shared_ptr<edm::DuplicateChecker> duplicateChecker_;
   }; // class RootFile
 
@@ -192,16 +191,6 @@ namespace edm {
   RootFile::makeBranchMapper(RootTree & rootTree, BranchType const& type) const {
     if (fileFormatVersion_.value_ >= 8) {
       boost::shared_ptr<BranchMapper> bm = rootTree.makeBranchMapper<T>();
-      // The following block handles files originating from the repacker where the max product ID was not
-      // set correctly in the registry.
-      if (fileFormatVersion_.value_ <= 9) {
-        ProductID pid = bm->maxProductID();
-        if (pid.id() >= productRegistry_->nextID()) {
-          ProductRegistry* pr = const_cast<ProductRegistry*>(productRegistry_.get());
-          pr->setProductIDs(pid.id() + 1);
-          nextIDfixup_ = true;
-        }
-      }
       return bm;
     } 
     // backward compatibility
@@ -219,7 +208,7 @@ namespace edm {
           EntryDescriptionID* ppb = pb.get();
           br->SetAddress(&ppb);
           input::getEntry(br, rootTree.entryNumber());
-	  std::vector<ProductStatus>::size_type index = it->second.oldProductID().id() - 1;
+	  std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
 	  EventEntryInfo entry(it->second.branchID(),
 		  rootTree.productStatuses()[index], it->second.oldProductID(), *pb);
 	  mapper->insert(entry);
@@ -242,6 +231,7 @@ namespace edm {
        }
       }
     }
+    // end backward compatibility
     return mapper;
   }
 

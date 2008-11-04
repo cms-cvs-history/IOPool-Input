@@ -26,10 +26,10 @@ namespace edm {
       TBranch *branch = tree->GetBranch(BranchTypeToBranchEntryInfoBranchName(branchType).c_str());
       return branch;
     }
-    TBranch * getStatusBranch(TTree * tree, BranchType const& branchType) {
-      TBranch *branch = tree->GetBranch(BranchTypeToProductStatusBranchName(branchType).c_str());
-      return branch;
-    }
+    TBranch * getStatusBranch(TTree * tree, BranchType const& branchType) { // backward compatibility
+      TBranch *branch = tree->GetBranch(BranchTypeToProductStatusBranchName(branchType).c_str()); // backward compatibility
+      return branch; // backward compatibility
+    } // backward compatibility
   }
   RootTree::RootTree(boost::shared_ptr<TFile> filePtr, BranchType const& branchType) :
     filePtr_(filePtr),
@@ -42,10 +42,10 @@ namespace edm {
     entryNumber_(-1),
     branchNames_(),
     branches_(new BranchMap),
-    productStatuses_(),
-    pProductStatuses_(&productStatuses_),
-    infoTree_(dynamic_cast<TTree *>(filePtr_.get() != 0 ? filePtr->Get(BranchTypeToInfoTreeName(branchType).c_str()) : 0)),
-    statusBranch_(infoTree_ ? getStatusBranch(infoTree_, branchType_) : 0)
+    productStatuses_(), // backward compatibility
+    pProductStatuses_(&productStatuses_), // backward compatibility
+    infoTree_(dynamic_cast<TTree *>(filePtr_.get() != 0 ? filePtr->Get(BranchTypeToInfoTreeName(branchType).c_str()) : 0)), // backward compatibility
+    statusBranch_(infoTree_ ? getStatusBranch(infoTree_, branchType_) : 0) // backward compatibility
   { }
 
   bool
@@ -53,10 +53,10 @@ namespace edm {
     if (metaTree_ == 0 || metaTree_->GetNbranches() == 0) {
       return tree_ != 0 && auxBranch_ != 0 && tree_->GetNbranches() == 1; 
     }
-    if (tree_ != 0 && auxBranch_ != 0 && metaTree_ != 0) {
-      if (branchEntryInfoBranch_ != 0 || statusBranch_ != 0) return true;
-      return (entries_ == metaTree_->GetEntries() && tree_->GetNbranches() <= metaTree_->GetNbranches() + 1); 
-    }
+    if (tree_ != 0 && auxBranch_ != 0 && metaTree_ != 0) { // backward compatibility
+      if (branchEntryInfoBranch_ != 0 || statusBranch_ != 0) return true; // backward compatibility
+      return (entries_ == metaTree_->GetEntries() && tree_->GetNbranches() <= metaTree_->GetNbranches() + 1);  // backward compatibility
+    } // backward compatibility
     return false;
   }
 
