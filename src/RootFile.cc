@@ -183,6 +183,8 @@ namespace edm {
     tempReg.setFrozen();
 
     std::auto_ptr<ProductRegistry> newReg(new ProductRegistry);
+    newReg->branchIDListVector() = tempReg.branchIDListVector();
+
     // Do the translation from the old registry to the new one
     {
       ProductRegistry::ProductList const& prodList = tempReg.productList();

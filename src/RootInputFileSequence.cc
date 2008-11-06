@@ -88,7 +88,7 @@ namespace edm {
             << "'setRunNumber' was " << setRun_ <<", while the first run was "
             << setRun_ - forcedRunOffset_ << ".\n";
         }
-        updateProductRegistry();
+        productRegistryUpdate().updateFromInput(*rootFile_->productRegistry());
       }
     } else {
       Service<RandomNumberGenerator> rng;
@@ -182,14 +182,6 @@ namespace edm {
 	   "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " was not found or could not be opened.\n";
       }
       LogWarning("") << "Input file: " << fileIter_->fileName() << " was not found or could not be opened, and will be skipped.\n";
-    }
-  }
-
-  void RootInputFileSequence::updateProductRegistry() const {
-    ProductRegistry::ProductList const& prodList = rootFile_->productRegistry()->productList();
-    for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end();
-	it != itEnd; ++it) {
-      productRegistryUpdate().copyProduct(it->second);
     }
   }
 

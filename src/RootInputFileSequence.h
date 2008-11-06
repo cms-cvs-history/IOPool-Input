@@ -5,7 +5,7 @@
 
 RootInputFileSequence: This is an InputSource
 
-$Id: RootInputFileSequence.h,v 1.19 2008/10/02 18:47:11 wdd Exp $
+$Id: RootInputFileSequence.h,v 1.20 2008/10/15 22:37:37 wdd Exp $
 
 ----------------------------------------------------------------------*/
 
@@ -66,7 +66,6 @@ namespace edm {
     ProductRegistry const& fileProductRegistry() const;
   private:
     void initFile(bool skipBadFiles);
-    void updateProductRegistry() const;
     bool nextFile();
     bool previousFile();
     void rewindFile();
