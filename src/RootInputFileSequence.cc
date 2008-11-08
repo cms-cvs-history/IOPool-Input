@@ -129,9 +129,6 @@ namespace edm {
     if (!rootFile_) {
       return boost::shared_ptr<FileBlock>(new FileBlock);
     }
-    if (primary()) {
-      productRegistryUpdate().setProductIDs();
-    }
     return rootFile_->createFileBlock();
   }
 

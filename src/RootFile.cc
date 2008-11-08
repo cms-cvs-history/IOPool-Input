@@ -15,6 +15,7 @@
 #include "DataFormats/Provenance/interface/BranchChildren.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetBlob.h"
+#include "DataFormats/Provenance/interface/BranchIDListRegistry.h"
 #include "DataFormats/Provenance/interface/EntryDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
@@ -121,16 +122,25 @@ namespace edm {
     ProductRegistry tempReg;
     ProductRegistry *ppReg = &tempReg;
     BranchChildren* branchChildrenBuffer = branchChildren_.get();
+
     typedef std::map<ParameterSetID, ParameterSetBlob> PsetMap;
     PsetMap psetMap;
-    ProcessHistoryMap pHistMap;
-    ModuleDescriptionMap mdMap;
     PsetMap *psetMapPtr = &psetMap;
-    ProcessHistoryMap *pHistMapPtr = &pHistMap;
-    ModuleDescriptionMap *mdMapPtr = &mdMap;
+
+    ProcessHistoryRegistry::collection_type pHistMap;
+    ProcessHistoryRegistry::collection_type *pHistMapPtr = &pHistMap;
+
+    ModuleDescriptionRegistry::collection_type mdMap;
+    ModuleDescriptionRegistry::collection_type *mdMapPtr = &mdMap;
+
+    BranchIDListRegistry::collection_type branchIDLists;
+    BranchIDListRegistry::collection_type *branchIDListsPtr = &branchIDLists;
+
     FileFormatVersion *fftPtr = &fileFormatVersion_;
     FileID *fidPtr = &fid_;
+
     FileIndex *findexPtr = &fileIndex_;
+
     std::vector<EventProcessHistoryID> *eventHistoryIDsPtr = &eventProcessHistoryIDs_;
 
     // Read the metadata tree.
@@ -140,10 +150,13 @@ namespace edm {
 							 << " in the input file.";
 
     metaDataTree->SetBranchAddress(poolNames::productDescriptionBranchName().c_str(),(&ppReg));
-    metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
-    metaDataTree->SetBranchAddress(poolNames::processHistoryMapBranchName().c_str(), &pHistMapPtr);
-    metaDataTree->SetBranchAddress(poolNames::moduleDescriptionMapBranchName().c_str(), &mdMapPtr);
+    metaDataTree->SetBranchAddress(poolNames::parameterSetBranchName().c_str(), &psetMapPtr);
+    metaDataTree->SetBranchAddress(poolNames::processHistoryBranchName().c_str(), &pHistMapPtr);
+    metaDataTree->SetBranchAddress(poolNames::moduleDescriptionBranchName().c_str(), &mdMapPtr);
     metaDataTree->SetBranchAddress(poolNames::fileFormatVersionBranchName().c_str(), &fftPtr);
+    if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::branchIDListBranchName().c_str(), &branchIDListsPtr);
+    }
     if (metaDataTree->FindBranch(poolNames::productDependenciesBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::productDependenciesBranchName().c_str(), &branchChildrenBuffer);
     }
@@ -183,7 +196,6 @@ namespace edm {
     tempReg.setFrozen();
 
     std::auto_ptr<ProductRegistry> newReg(new ProductRegistry);
-    newReg->branchIDListVector() = tempReg.branchIDListVector();
 
     // Do the translation from the old registry to the new one
     {
@@ -215,15 +227,19 @@ namespace edm {
     // Merge into the registries. For now, we do NOT merge the product registry.
     pset::Registry& psetRegistry = *pset::Registry::instance();
     for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
-      psetRegistry.insertMapped(ParameterSet(i->second.pset_));
+      psetRegistry.registryPut(ParameterSet(i->second.pset_));
     } 
     ProcessHistoryRegistry & processNameListRegistry = *ProcessHistoryRegistry::instance();
-    for (ProcessHistoryMap::const_iterator j = pHistMap.begin(), jEnd = pHistMap.end(); j != jEnd; ++j) {
-      processNameListRegistry.insertMapped(j->second);
+    for (ProcessHistoryRegistry::const_iterator j = pHistMap.begin(), jEnd = pHistMap.end(); j != jEnd; ++j) {
+      processNameListRegistry.registryPut(j->second);
     } 
     ModuleDescriptionRegistry & moduleDescriptionRegistry = *ModuleDescriptionRegistry::instance();
-    for (ModuleDescriptionMap::const_iterator k = mdMap.begin(), kEnd = mdMap.end(); k != kEnd; ++k) {
-      moduleDescriptionRegistry.insertMapped(k->second);
+    for (ModuleDescriptionRegistry::const_iterator k = mdMap.begin(), kEnd = mdMap.end(); k != kEnd; ++k) {
+      moduleDescriptionRegistry.registryPut(k->second);
+    } 
+    BranchIDListRegistry & branchIDListRegistry = *BranchIDListRegistry::instance();
+    for (BranchIDListRegistry::const_iterator k = branchIDLists.begin(), kEnd = branchIDLists.end(); k != kEnd; ++k) {
+      branchIDListRegistry.registryPut(*k);
     } 
 
     ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
@@ -326,7 +342,7 @@ namespace edm {
 	// This discards the parentage information, for now.
 	EventEntryDescription eid;
 	eid.moduleDescriptionID() = entryDescriptionBuffer.moduleDescriptionID();
-        registry.insertMapped(eid);
+        registry.registryPut(eid);
       }
     } else {
       EventEntryDescription entryDescriptionBuffer;
@@ -339,7 +355,7 @@ namespace edm {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
 	  throw edm::Exception(edm::errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
-        registry.insertMapped(entryDescriptionBuffer);
+        registry.registryPut(entryDescriptionBuffer);
       }
     }
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionIDBranchName().c_str(), 0);
