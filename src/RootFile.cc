@@ -150,8 +150,8 @@ namespace edm {
 							 << " in the input file.";
 
     metaDataTree->SetBranchAddress(poolNames::productDescriptionBranchName().c_str(),(&ppReg));
-    metaDataTree->SetBranchAddress(poolNames::parameterSetBranchName().c_str(), &psetMapPtr);
-    metaDataTree->SetBranchAddress(poolNames::processHistoryBranchName().c_str(), &pHistMapPtr);
+    metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
+    metaDataTree->SetBranchAddress(poolNames::processHistoryMapBranchName().c_str(), &pHistMapPtr);
     metaDataTree->SetBranchAddress(poolNames::moduleDescriptionBranchName().c_str(), &mdMapPtr);
     metaDataTree->SetBranchAddress(poolNames::fileFormatVersionBranchName().c_str(), &fftPtr);
     if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
@@ -227,19 +227,19 @@ namespace edm {
     // Merge into the registries. For now, we do NOT merge the product registry.
     pset::Registry& psetRegistry = *pset::Registry::instance();
     for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
-      psetRegistry.registryPut(ParameterSet(i->second.pset_));
+      psetRegistry.insertMapped(ParameterSet(i->second.pset_));
     } 
     ProcessHistoryRegistry & processNameListRegistry = *ProcessHistoryRegistry::instance();
     for (ProcessHistoryRegistry::const_iterator j = pHistMap.begin(), jEnd = pHistMap.end(); j != jEnd; ++j) {
-      processNameListRegistry.registryPut(j->second);
+      processNameListRegistry.insertMapped(j->second);
     } 
     ModuleDescriptionRegistry & moduleDescriptionRegistry = *ModuleDescriptionRegistry::instance();
     for (ModuleDescriptionRegistry::const_iterator k = mdMap.begin(), kEnd = mdMap.end(); k != kEnd; ++k) {
-      moduleDescriptionRegistry.registryPut(k->second);
+      moduleDescriptionRegistry.insertMapped(k->second);
     } 
     BranchIDListRegistry & branchIDListRegistry = *BranchIDListRegistry::instance();
     for (BranchIDListRegistry::const_iterator k = branchIDLists.begin(), kEnd = branchIDLists.end(); k != kEnd; ++k) {
-      branchIDListRegistry.registryPut(*k);
+      branchIDListRegistry.insertMapped(*k);
     } 
 
     ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
@@ -342,7 +342,7 @@ namespace edm {
 	// This discards the parentage information, for now.
 	EventEntryDescription eid;
 	eid.moduleDescriptionID() = entryDescriptionBuffer.moduleDescriptionID();
-        registry.registryPut(eid);
+        registry.insertMapped(eid);
       }
     } else {
       EventEntryDescription entryDescriptionBuffer;
@@ -355,7 +355,7 @@ namespace edm {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
 	  throw edm::Exception(edm::errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
-        registry.registryPut(entryDescriptionBuffer);
+        registry.insertMapped(entryDescriptionBuffer);
       }
     }
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionIDBranchName().c_str(), 0);
