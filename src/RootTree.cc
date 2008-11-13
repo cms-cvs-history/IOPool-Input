@@ -22,7 +22,7 @@ namespace edm {
       }
       return branch;
     }
-    TBranch * getEventEntryInfoBranch(TTree * tree, BranchType const& branchType) {
+    TBranch * getProductProvenanceBranch(TTree * tree, BranchType const& branchType) {
       TBranch *branch = tree->GetBranch(BranchTypeToBranchEntryInfoBranchName(branchType).c_str());
       return branch;
     }
@@ -37,7 +37,7 @@ namespace edm {
     metaTree_(dynamic_cast<TTree *>(filePtr_.get() != 0 ? filePtr->Get(BranchTypeToMetaDataTreeName(branchType).c_str()) : 0)),
     branchType_(branchType),
     auxBranch_(tree_ ? getAuxiliaryBranch(tree_, branchType_) : 0),
-    branchEntryInfoBranch_(metaTree_ ? getEventEntryInfoBranch(metaTree_, branchType_) : 0),
+    branchEntryInfoBranch_(metaTree_ ? getProductProvenanceBranch(metaTree_, branchType_) : 0),
     entries_(tree_ ? tree_->GetEntries() : 0),
     entryNumber_(-1),
     branchNames_(),

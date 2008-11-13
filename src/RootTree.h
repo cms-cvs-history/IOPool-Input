@@ -17,7 +17,7 @@ RootTree.h // used by ROOT input sources
 #include "Inputfwd.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
-#include "DataFormats/Provenance/interface/EventEntryInfo.h"
+#include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "DataFormats/Provenance/interface/BranchKey.h"
 #include "IOPool/Input/src/BranchMapperWithReader.h"
 #include "TBranch.h"
@@ -70,6 +70,8 @@ namespace edm {
       statusBranch_->SetAddress(&pProductStatuses_); // backward compatibility
       input::getEntry(statusBranch_, entryNumber_); // backward compatibility
     } // backward compatibility
+
+    TBranch *const branchEntryInfoBranch() const {return branchEntryInfoBranch_;}
 
   private:
     boost::shared_ptr<TFile> filePtr_;

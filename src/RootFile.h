@@ -32,7 +32,7 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/FileID.h"
 #include "DataFormats/Provenance/interface/FileIndex.h"
 #include "DataFormats/Provenance/interface/History.h"
-#include "DataFormats/Provenance/interface/EventEntryInfo.h"
+#include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/RunLumiEntryInfo.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
@@ -189,13 +189,23 @@ namespace edm {
   template <typename T>
   boost::shared_ptr<BranchMapper>
   RootFile::makeBranchMapper(RootTree & rootTree, BranchType const& type) const {
-    if (fileFormatVersion_.value_ >= 8) {
+    if (fileFormatVersion_.value_ >= 11) {
       boost::shared_ptr<BranchMapper> bm = rootTree.makeBranchMapper<T>();
       return bm;
     } 
     // backward compatibility
     boost::shared_ptr<BranchMapper> mapper(new BranchMapper);
-    if (fileFormatVersion_.value_ >= 7) {
+    if (fileFormatVersion_.value_ >= 8) {
+      std::vector<T> infoVector;
+      std::vector<T> * pInfoVector = &infoVector;
+      rootTree.branchEntryInfoBranch()->SetAddress(&pInfoVector);
+      input::getEntry(rootTree.branchEntryInfoBranch(), rootTree.entryNumber());
+      for (typename std::vector<T>::const_iterator it = infoVector.begin(), itEnd = infoVector.end(); it != itEnd; ++it) {
+	ProductProvenance entry(it->branchID(), it->productStatus(), it->entryDescriptionID());
+	mapper->insert(entry);
+	// QQQ it->productID()
+      }
+    } else if (fileFormatVersion_.value_ >= 7) {
       rootTree.fillStatus();
       for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
           itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
@@ -209,9 +219,10 @@ namespace edm {
           br->SetAddress(&ppb);
           input::getEntry(br, rootTree.entryNumber());
 	  std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
-	  EventEntryInfo entry(it->second.branchID(),
-		  rootTree.productStatuses()[index], it->second.oldProductID(), *pb);
+	  ProductProvenance entry(it->second.branchID(),
+		  rootTree.productStatuses()[index], *pb);
 	  mapper->insert(entry);
+	  // QQQ it->second.oldProductID()
         }
       }
     } else {
@@ -226,8 +237,9 @@ namespace edm {
           std::auto_ptr<EntryDescription> entryDesc = pb->convertToEntryDescription();
 	  ProductStatus status = (ppb->creatorStatus() == BranchEntryDescription::Success ? productstatus::present() : productstatus::neverCreated());
 	  // Throws parents away for now.
-	  EventEntryInfo entry(it->second.branchID(), status, entryDesc->moduleDescriptionID(), it->second.oldProductID());
+	  ProductProvenance entry(it->second.branchID(), status, entryDesc->moduleDescriptionID());
 	  mapper->insert(entry);
+	  // QQQ it->second.oldProductID()
        }
       }
     }

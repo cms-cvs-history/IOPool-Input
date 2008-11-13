@@ -837,13 +837,18 @@ namespace edm {
     fillHistory();
     overrideRunNumber(eventAux_.id_, eventAux_.isRealData());
 
+    boost::shared_ptr<BranchMapper> mapper =
+       fileFormatVersion().value_ <= 10 && fileFormatVersion().value_ >= 8 ?
+       makeBranchMapper<EventEntryInfo>(eventTree_, InEvent) :
+       makeBranchMapper<ProductProvenance>(eventTree_, InEvent);
+
     // We're not done ... so prepare the EventPrincipal
     std::auto_ptr<EventPrincipal> thisEvent(new EventPrincipal(
 		eventAux_,
 		pReg,
 		processConfiguration_,
 		history_,
-		makeBranchMapper<EventEntryInfo>(eventTree_, InEvent),
+		mapper,
 		eventTree_.makeDelayedReader()));
 
     // Create a group in the event for each product
