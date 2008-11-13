@@ -229,18 +229,9 @@ namespace edm {
     for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
       psetRegistry.insertMapped(ParameterSet(i->second.pset_));
     } 
-    ProcessHistoryRegistry & processNameListRegistry = *ProcessHistoryRegistry::instance();
-    for (ProcessHistoryRegistry::const_iterator j = pHistMap.begin(), jEnd = pHistMap.end(); j != jEnd; ++j) {
-      processNameListRegistry.insertMapped(j->second);
-    } 
-    ModuleDescriptionRegistry & moduleDescriptionRegistry = *ModuleDescriptionRegistry::instance();
-    for (ModuleDescriptionRegistry::const_iterator k = mdMap.begin(), kEnd = mdMap.end(); k != kEnd; ++k) {
-      moduleDescriptionRegistry.insertMapped(k->second);
-    } 
-    BranchIDListRegistry & branchIDListRegistry = *BranchIDListRegistry::instance();
-    for (BranchIDListRegistry::const_iterator k = branchIDLists.begin(), kEnd = branchIDLists.end(); k != kEnd; ++k) {
-      branchIDListRegistry.insertMapped(*k);
-    } 
+    ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
+    ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
+    BranchIDListRegistry::instance()->insertCollection(branchIDLists);
 
     ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
 
