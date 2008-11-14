@@ -10,6 +10,7 @@
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/Framework/interface/FileBlock.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "DataFormats/Provenance/interface/BranchIDListHelper.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -89,7 +90,7 @@ namespace edm {
             << setRun_ - forcedRunOffset_ << ".\n";
         }
         productRegistryUpdate().updateFromInput(rootFile_->productRegistry()->productList());
-	BranchIDListRegistry::instance()->insertCollection(rootFile_->branchIDLists());
+        BranchIDListHelper::merge(rootFile_->branchIDLists(), fileIter_->fileName());
       }
     } else {
       Service<RandomNumberGenerator> rng;
