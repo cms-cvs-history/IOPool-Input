@@ -88,7 +88,8 @@ namespace edm {
             << "'setRunNumber' was " << setRun_ <<", while the first run was "
             << setRun_ - forcedRunOffset_ << ".\n";
         }
-        productRegistryUpdate().updateFromInput(*rootFile_->productRegistry());
+        productRegistryUpdate().updateFromInput(rootFile_->productRegistry()->productList());
+	BranchIDListRegistry::instance()->insertCollection(rootFile_->branchIDLists());
       }
     } else {
       Service<RandomNumberGenerator> rng;
@@ -207,6 +208,7 @@ namespace edm {
       if (!mergeInfo.empty()) {
         throw edm::Exception(errors::MismatchedInputFiles,"RootInputFileSequence::nextFile()") << mergeInfo;
       }
+      BranchIDListHelper::merge(rootFile_->branchIDLists(), fileIter_->fileName());
     }
     return true;
   }
@@ -231,6 +233,7 @@ namespace edm {
       if (!mergeInfo.empty()) {
         throw edm::Exception(errors::MismatchedInputFiles,"RootInputFileSequence::previousEvent()") << mergeInfo;
       }
+      BranchIDListHelper::merge(rootFile_->branchIDLists(), fileIter_->fileName());
     }
     if (rootFile_) rootFile_->setToLastEntry();
     return true;

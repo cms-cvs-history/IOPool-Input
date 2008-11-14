@@ -15,7 +15,6 @@
 #include "DataFormats/Provenance/interface/BranchChildren.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetBlob.h"
-#include "DataFormats/Provenance/interface/BranchIDListRegistry.h"
 #include "DataFormats/Provenance/interface/EntryDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
@@ -99,6 +98,7 @@ namespace edm {
       runTree_(filePtr_, InRun),
       treePointers_(),
       productRegistry_(),
+      branchIDLists_(),
       processingMode_(processingMode),
       forcedRunOffset_(forcedRunOffset),
       newBranchToOldBranch_(),
@@ -133,8 +133,8 @@ namespace edm {
     ModuleDescriptionRegistry::collection_type mdMap;
     ModuleDescriptionRegistry::collection_type *mdMapPtr = &mdMap;
 
-    BranchIDListRegistry::collection_type branchIDLists;
-    BranchIDListRegistry::collection_type *branchIDListsPtr = &branchIDLists;
+    std::auto_ptr<BranchIDListRegistry::collection_type> branchIDListsAPtr(new BranchIDListRegistry::collection_type);
+    BranchIDListRegistry::collection_type *branchIDListsPtr = branchIDListsAPtr.get();
 
     FileFormatVersion *fftPtr = &fileFormatVersion_;
     FileID *fidPtr = &fid_;
@@ -205,12 +205,10 @@ namespace edm {
         BranchDescription const& prod = it->second;
         std::string newFriendlyName = friendlyname::friendlyName(prod.className());
 	if (newFriendlyName == prod.friendlyClassName()) {
-	  prod.init();
           newReg->copyProduct(prod);
 	} else {
           BranchDescription newBD(prod);
           newBD.updateFriendlyClassName();
-	  newBD.init();
           newReg->copyProduct(newBD);
 	  // Need to call init to get old branch name.
 	  prod.init();
@@ -231,7 +229,7 @@ namespace edm {
     } 
     ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
     ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
-    BranchIDListRegistry::instance()->insertCollection(branchIDLists);
+    branchIDLists_.reset(branchIDListsAPtr.release());
 
     ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
 

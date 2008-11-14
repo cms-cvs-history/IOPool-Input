@@ -21,6 +21,7 @@ RootFile.h // used by ROOT input sources
 #include "FWCore/Framework/interface/GroupSelector.h"
 #include "FWCore/Framework/interface/InputSource.h"
 #include "DataFormats/Provenance/interface/BranchChildren.h"
+#include "DataFormats/Provenance/interface/BranchIDListRegistry.h"
 #include "DataFormats/Provenance/interface/BranchMapper.h"
 #include "DataFormats/Provenance/interface/EventAuxiliary.h"
 #include "DataFormats/Provenance/interface/EventProcessHistoryID.h"
@@ -86,6 +87,7 @@ namespace edm {
     std::string const& file() const {return file_;}
     boost::shared_ptr<RunPrincipal> readRun(boost::shared_ptr<ProductRegistry const> pReg);
     boost::shared_ptr<ProductRegistry const> productRegistry() const {return productRegistry_;}
+    BranchIDListRegistry::collection_type const& branchIDLists() {return *branchIDLists_;}
     EventAuxiliary const& eventAux() const {return eventAux_;}
     LuminosityBlockAuxiliary const& luminosityBlockAux() {return lumiAux_;}
     RunAuxiliary const& runAux() const {return runAux_;}
@@ -177,6 +179,7 @@ namespace edm {
     RootTree runTree_;
     RootTreePtrArray treePointers_;
     boost::shared_ptr<ProductRegistry const> productRegistry_;
+    boost::shared_ptr<BranchIDListRegistry::collection_type const> branchIDLists_;
     InputSource::ProcessingMode processingMode_;
     int forcedRunOffset_;
     std::map<std::string, std::string> newBranchToOldBranch_;
