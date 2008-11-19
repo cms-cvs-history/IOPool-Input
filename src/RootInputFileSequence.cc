@@ -90,7 +90,8 @@ namespace edm {
             << setRun_ - forcedRunOffset_ << ".\n";
         }
         productRegistryUpdate().updateFromInput(rootFile_->productRegistry()->productList());
-        BranchIDListHelper::merge(rootFile_->branchIDLists(), fileIter_->fileName());
+        BranchIDListHelper::updateFromInput(rootFile_->branchIDLists(), fileIter_->fileName());
+        BranchIDListHelper::updateFromInput(rootFile_->parameterSetIDLists(), fileIter_->fileName());
       }
     } else {
       Service<RandomNumberGenerator> rng;
@@ -209,7 +210,8 @@ namespace edm {
       if (!mergeInfo.empty()) {
         throw edm::Exception(errors::MismatchedInputFiles,"RootInputFileSequence::nextFile()") << mergeInfo;
       }
-      BranchIDListHelper::merge(rootFile_->branchIDLists(), fileIter_->fileName());
+      BranchIDListHelper::updateFromInput(rootFile_->branchIDLists(), fileIter_->fileName());
+      BranchIDListHelper::updateFromInput(rootFile_->parameterSetIDLists(), fileIter_->fileName());
     }
     return true;
   }
@@ -234,7 +236,8 @@ namespace edm {
       if (!mergeInfo.empty()) {
         throw edm::Exception(errors::MismatchedInputFiles,"RootInputFileSequence::previousEvent()") << mergeInfo;
       }
-      BranchIDListHelper::merge(rootFile_->branchIDLists(), fileIter_->fileName());
+      BranchIDListHelper::updateFromInput(rootFile_->branchIDLists(), fileIter_->fileName());
+      BranchIDListHelper::updateFromInput(rootFile_->parameterSetIDLists(), fileIter_->fileName());
     }
     if (rootFile_) rootFile_->setToLastEntry();
     return true;

@@ -27,6 +27,7 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/EventProcessHistoryID.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockAuxiliary.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
+#include "DataFormats/Provenance/interface/ParameterSetIDListRegistry.h"
 #include "DataFormats/Provenance/interface/ProductStatus.h"
 #include "DataFormats/Provenance/interface/RunAuxiliary.h"
 #include "DataFormats/Provenance/interface/FileFormatVersion.h"
@@ -88,6 +89,7 @@ namespace edm {
     boost::shared_ptr<RunPrincipal> readRun(boost::shared_ptr<ProductRegistry const> pReg);
     boost::shared_ptr<ProductRegistry const> productRegistry() const {return productRegistry_;}
     BranchIDListRegistry::collection_type const& branchIDLists() {return *branchIDLists_;}
+    ParameterSetIDListRegistry::collection_type const& parameterSetIDLists() {return *parameterSetIDLists_;}
     EventAuxiliary const& eventAux() const {return eventAux_;}
     LuminosityBlockAuxiliary const& luminosityBlockAux() {return lumiAux_;}
     RunAuxiliary const& runAux() const {return runAux_;}
@@ -180,6 +182,7 @@ namespace edm {
     RootTreePtrArray treePointers_;
     boost::shared_ptr<ProductRegistry const> productRegistry_;
     boost::shared_ptr<BranchIDListRegistry::collection_type const> branchIDLists_;
+    boost::shared_ptr<ParameterSetIDListRegistry::collection_type const> parameterSetIDLists_;
     InputSource::ProcessingMode processingMode_;
     int forcedRunOffset_;
     std::map<std::string, std::string> newBranchToOldBranch_;
@@ -204,7 +207,7 @@ namespace edm {
       rootTree.branchEntryInfoBranch()->SetAddress(&pInfoVector);
       input::getEntry(rootTree.branchEntryInfoBranch(), rootTree.entryNumber());
       for (typename std::vector<T>::const_iterator it = infoVector.begin(), itEnd = infoVector.end(); it != itEnd; ++it) {
-	ProductProvenance entry(it->branchID(), it->productStatus(), it->entryDescriptionID());
+	ProductProvenance entry(it->branchID(), it->productStatus());
 	mapper->insert(entry);
 	// QQQ it->productID()
       }
@@ -240,7 +243,7 @@ namespace edm {
           std::auto_ptr<EntryDescription> entryDesc = pb->convertToEntryDescription();
 	  ProductStatus status = (ppb->creatorStatus() == BranchEntryDescription::Success ? productstatus::present() : productstatus::neverCreated());
 	  // Throws parents away for now.
-	  ProductProvenance entry(it->second.branchID(), status, entryDesc->moduleDescriptionID());
+	  ProductProvenance entry(it->second.branchID(), status);
 	  mapper->insert(entry);
 	  // QQQ it->second.oldProductID()
        }

@@ -99,6 +99,7 @@ namespace edm {
       treePointers_(),
       productRegistry_(),
       branchIDLists_(),
+      parameterSetIDLists_(),
       processingMode_(processingMode),
       forcedRunOffset_(forcedRunOffset),
       newBranchToOldBranch_(),
@@ -136,6 +137,9 @@ namespace edm {
     std::auto_ptr<BranchIDListRegistry::collection_type> branchIDListsAPtr(new BranchIDListRegistry::collection_type);
     BranchIDListRegistry::collection_type *branchIDListsPtr = branchIDListsAPtr.get();
 
+    std::auto_ptr<ParameterSetIDListRegistry::collection_type> parameterSetIDListsAPtr(new ParameterSetIDListRegistry::collection_type);
+    ParameterSetIDListRegistry::collection_type *parameterSetIDListsPtr = parameterSetIDListsAPtr.get();
+
     FileFormatVersion *fftPtr = &fileFormatVersion_;
     FileID *fidPtr = &fid_;
 
@@ -156,6 +160,9 @@ namespace edm {
     metaDataTree->SetBranchAddress(poolNames::fileFormatVersionBranchName().c_str(), &fftPtr);
     if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::branchIDListBranchName().c_str(), &branchIDListsPtr);
+    }
+    if (metaDataTree->FindBranch(poolNames::parameterSetIDListBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::parameterSetIDListBranchName().c_str(), &parameterSetIDListsPtr);
     }
     if (metaDataTree->FindBranch(poolNames::productDependenciesBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::productDependenciesBranchName().c_str(), &branchChildrenBuffer);
@@ -207,6 +214,11 @@ namespace edm {
 	if (newFriendlyName == prod.friendlyClassName()) {
           newReg->copyProduct(prod);
 	} else {
+          if (fileFormatVersion_.value_ >= 11) {
+	    throw edm::Exception(errors::UnimplementedFeature)
+	      << "Cannot change friendly class name algorithm without more development work\n"
+	      << "to update BranchIDLists.  Contact the framework group.\n";
+	  }
           BranchDescription newBD(prod);
           newBD.updateFriendlyClassName();
           newReg->copyProduct(newBD);
@@ -230,6 +242,7 @@ namespace edm {
     ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
     ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
     branchIDLists_.reset(branchIDListsAPtr.release());
+    parameterSetIDLists_.reset(parameterSetIDListsAPtr.release());
 
     ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
 
