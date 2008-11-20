@@ -24,7 +24,6 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/BranchIDListRegistry.h"
 #include "DataFormats/Provenance/interface/BranchMapper.h"
 #include "DataFormats/Provenance/interface/EventAuxiliary.h"
-#include "DataFormats/Provenance/interface/EventProcessHistoryID.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockAuxiliary.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
 #include "DataFormats/Provenance/interface/ParameterSetIDListRegistry.h"
@@ -36,12 +35,13 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/History.h"
 #include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
-#include "DataFormats/Provenance/interface/RunLumiEntryInfo.h"
+#include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
-#include "DataFormats/Provenance/interface/EventEntryDescription.h"
-#include "DataFormats/Provenance/interface/BranchEntryDescription.h"
+#include "DataFormats/Provenance/interface/Parentage.h"
 #include "DataFormats/Provenance/interface/ProductID.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
+#include "DataFormats/Provenance/interface/BranchEntryDescription.h" // backward compatibility
+#include "DataFormats/Provenance/interface/EventProcessHistoryID.h" // backward compatibility
 class TFile;
 
 namespace edm {
@@ -138,6 +138,7 @@ namespace edm {
     void overrideRunNumber(LuminosityBlockID & id);
     void overrideRunNumber(EventID & id, bool isRealData);
     std::string const& newBranchToOldBranch(std::string const& newBranch) const;
+    void readParentageTree();
     void readEntryDescriptionTree();
     void readEventHistoryTree();
 
@@ -159,8 +160,8 @@ namespace edm {
     FileIndex::const_iterator fileIndexBegin_;
     FileIndex::const_iterator fileIndexEnd_;
     FileIndex::const_iterator fileIndexIter_;
-    std::vector<EventProcessHistoryID> eventProcessHistoryIDs_;
-    std::vector<EventProcessHistoryID>::const_iterator eventProcessHistoryIter_;
+    std::vector<EventProcessHistoryID> eventProcessHistoryIDs_;  // backward compatibility
+    std::vector<EventProcessHistoryID>::const_iterator eventProcessHistoryIter_; // backward compatibility
     RunNumber_t startAtRun_;
     LuminosityBlockNumber_t startAtLumi_;
     EventNumber_t startAtEvent_;
@@ -220,8 +221,8 @@ namespace edm {
 	  input::BranchInfo const& ib = ix->second;
 	  TBranch *br = ib.provenanceBranch_;
 	  //TBranch *br = rootTree.branches().find(it->first)->second.provenanceBranch_;
-          std::auto_ptr<EntryDescriptionID> pb(new EntryDescriptionID);
-          EntryDescriptionID* ppb = pb.get();
+          std::auto_ptr<ParentageID> pb(new ParentageID);
+          ParentageID* ppb = pb.get();
           br->SetAddress(&ppb);
           input::getEntry(br, rootTree.entryNumber());
 	  std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
@@ -232,6 +233,7 @@ namespace edm {
         }
       }
     } else {
+/*
       for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
           itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
         if (type == it->second.branchType() && !it->second.transient()) {
@@ -248,6 +250,7 @@ namespace edm {
 	  // QQQ it->second.oldProductID()
        }
       }
+*/
     }
     // end backward compatibility
     return mapper;

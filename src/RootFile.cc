@@ -15,7 +15,7 @@
 #include "DataFormats/Provenance/interface/BranchChildren.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetBlob.h"
-#include "DataFormats/Provenance/interface/EntryDescriptionRegistry.h"
+#include "DataFormats/Provenance/interface/ParentageRegistry.h"
 #include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/Provenance/interface/RunID.h"
@@ -29,9 +29,11 @@
 #include "FWCore/Utilities/interface/FriendlyName.h"
 
 //used for backward compatibility
+#include "DataFormats/Provenance/interface/EntryDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/EventAux.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockAux.h"
 #include "DataFormats/Provenance/interface/RunAux.h"
+#include "DataFormats/Provenance/interface/RunLumiEntryInfo.h"
 
 #include "TROOT.h"
 #include "TClass.h"
@@ -153,10 +155,11 @@ namespace edm {
       throw edm::Exception(edm::errors::EventCorruption) << "Could not find tree " << poolNames::metaDataTreeName()
 							 << " in the input file.";
 
+    // To keep things simple, we just read in every possible branch that exists.
+    // We don't pay attention to which branches exist in which file format versions
     metaDataTree->SetBranchAddress(poolNames::productDescriptionBranchName().c_str(),(&ppReg));
     metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
     metaDataTree->SetBranchAddress(poolNames::processHistoryMapBranchName().c_str(), &pHistMapPtr);
-    metaDataTree->SetBranchAddress(poolNames::moduleDescriptionBranchName().c_str(), &mdMapPtr);
     metaDataTree->SetBranchAddress(poolNames::fileFormatVersionBranchName().c_str(), &fftPtr);
     if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::branchIDListBranchName().c_str(), &branchIDListsPtr);
@@ -176,10 +179,13 @@ namespace edm {
     if (metaDataTree->FindBranch(poolNames::eventHistoryBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::eventHistoryBranchName().c_str(), &eventHistoryIDsPtr);
     }
-
+    // backward compatibility
+    if (metaDataTree->FindBranch(poolNames::moduleDescriptionMapBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::moduleDescriptionMapBranchName().c_str(), &mdMapPtr);
+    }
     input::getEntry(metaDataTree, 0);
 
-    readEntryDescriptionTree();
+    readParentageTree();
 
     validateFile();
 
@@ -317,8 +323,7 @@ namespace edm {
   }
 
   void
-  RootFile::readEntryDescriptionTree()
-  { 
+  RootFile::readEntryDescriptionTree() { 
     if (fileFormatVersion_.value_ < 6) return; 
     TTree* entryDescriptionTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::entryDescriptionTreeName().c_str()));
     if (!entryDescriptionTree) 
@@ -362,6 +367,38 @@ namespace edm {
     }
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionIDBranchName().c_str(), 0);
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), 0);
+  }
+
+  void
+  RootFile::readParentageTree()
+  { 
+    if (fileFormatVersion_.value_ < 11) {
+      readEntryDescriptionTree();
+      return;
+    }
+    TTree* parentageTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::parentageTreeName().c_str()));
+    if (!parentageTree) 
+      throw edm::Exception(edm::errors::EventCorruption) << "Could not find tree " << poolNames::parentageTreeName()
+							 << " in the input file.";
+
+    ParentageID idBuffer;
+    ParentageID* pidBuffer = &idBuffer;
+    parentageTree->SetBranchAddress(poolNames::parentageIDBranchName().c_str(), &pidBuffer);
+
+    Parentage parentageBuffer;
+    Parentage *pParentageBuffer = &parentageBuffer;
+    parentageTree->SetBranchAddress(poolNames::parentageBranchName().c_str(), &pParentageBuffer);
+
+    ParentageRegistry& registry = *ParentageRegistry::instance();
+
+    for (Long64_t i = 0, numEntries = parentageTree->GetEntries(); i < numEntries; ++i) {
+      input::getEntry(parentageTree, i);
+      if (idBuffer != parentageBuffer.id())
+        throw edm::Exception(edm::errors::EventCorruption) << "Corruption of Parentage tree detected.";
+      registry.insertMapped(parentageBuffer);
+    }
+    parentageTree->SetBranchAddress(poolNames::parentageIDBranchName().c_str(), 0);
+    parentageTree->SetBranchAddress(poolNames::parentageBranchName().c_str(), 0);
   }
 
   bool
@@ -908,7 +945,7 @@ namespace edm {
 	new RunPrincipal(runAux_,
 			 pReg,
 			 processConfiguration_,
-			 makeBranchMapper<RunEntryInfo>(runTree_, InRun),
+			 makeBranchMapper<ProductProvenance>(runTree_, InRun),
 			 runTree_.makeDelayedReader()));
     // Create a group in the run for each product
     runTree_.fillGroups(*thisRun);
@@ -965,7 +1002,7 @@ namespace edm {
     boost::shared_ptr<LuminosityBlockPrincipal> thisLumi(
 	new LuminosityBlockPrincipal(lumiAux_,
 				     pReg, processConfiguration_,
-				     makeBranchMapper<LumiEntryInfo>(lumiTree_, InLumi),
+				     makeBranchMapper<ProductProvenance>(lumiTree_, InLumi),
 				     lumiTree_.makeDelayedReader()));
     // Create a group in the lumi for each product
     lumiTree_.fillGroups(*thisLumi);

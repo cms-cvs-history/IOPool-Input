@@ -45,7 +45,7 @@ namespace edm {
     BranchMapperWithReader<T> * me = const_cast<BranchMapperWithReader<T> *>(this);
     for (typename std::vector<T>::const_iterator it = infoVector_.begin(), itEnd = infoVector_.end();
       it != itEnd; ++it) {
-      me->insert(it->makeEntryInfo());
+      me->insert(it->makeProductProvenance());
     }
   }
 
