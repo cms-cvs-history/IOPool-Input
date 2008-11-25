@@ -138,6 +138,7 @@ namespace edm {
     void overrideRunNumber(LuminosityBlockID & id);
     void overrideRunNumber(EventID & id, bool isRealData);
     std::string const& newBranchToOldBranch(std::string const& newBranch) const;
+    void dropOnInput(ProductRegistry::ProductList& prodList, bool dropMergeable);
     void readParentageTree();
     void readEntryDescriptionTree();
     void readEventHistoryTree();

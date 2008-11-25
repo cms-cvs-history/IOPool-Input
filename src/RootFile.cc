@@ -119,36 +119,6 @@ namespace edm {
     treePointers_[InLumi]  = &lumiTree_;
     treePointers_[InRun]   = &runTree_;
 
-    // Set up buffers for registries.
-    // Need to read to a temporary registry so we can do a translation of the BranchKeys.
-    // This preserves backward compatibility against friendly class name algorithm changes.
-    ProductRegistry tempReg;
-    ProductRegistry *ppReg = &tempReg;
-    BranchChildren* branchChildrenBuffer = branchChildren_.get();
-
-    typedef std::map<ParameterSetID, ParameterSetBlob> PsetMap;
-    PsetMap psetMap;
-    PsetMap *psetMapPtr = &psetMap;
-
-    ProcessHistoryRegistry::collection_type pHistMap;
-    ProcessHistoryRegistry::collection_type *pHistMapPtr = &pHistMap;
-
-    ModuleDescriptionRegistry::collection_type mdMap;
-    ModuleDescriptionRegistry::collection_type *mdMapPtr = &mdMap;
-
-    std::auto_ptr<BranchIDListRegistry::collection_type> branchIDListsAPtr(new BranchIDListRegistry::collection_type);
-    BranchIDListRegistry::collection_type *branchIDListsPtr = branchIDListsAPtr.get();
-
-    std::auto_ptr<ParameterSetIDListRegistry::collection_type> parameterSetIDListsAPtr(new ParameterSetIDListRegistry::collection_type);
-    ParameterSetIDListRegistry::collection_type *parameterSetIDListsPtr = parameterSetIDListsAPtr.get();
-
-    FileFormatVersion *fftPtr = &fileFormatVersion_;
-    FileID *fidPtr = &fid_;
-
-    FileIndex *findexPtr = &fileIndex_;
-
-    std::vector<EventProcessHistoryID> *eventHistoryIDsPtr = &eventProcessHistoryIDs_;
-
     // Read the metadata tree.
     TTree *metaDataTree = dynamic_cast<TTree *>(filePtr_->Get(poolNames::metaDataTreeName().c_str()));
     if (!metaDataTree)
@@ -157,37 +127,77 @@ namespace edm {
 
     // To keep things simple, we just read in every possible branch that exists.
     // We don't pay attention to which branches exist in which file format versions
-    metaDataTree->SetBranchAddress(poolNames::productDescriptionBranchName().c_str(),(&ppReg));
-    metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
-    metaDataTree->SetBranchAddress(poolNames::processHistoryMapBranchName().c_str(), &pHistMapPtr);
+
+    FileFormatVersion *fftPtr = &fileFormatVersion_;
     metaDataTree->SetBranchAddress(poolNames::fileFormatVersionBranchName().c_str(), &fftPtr);
-    if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
-      metaDataTree->SetBranchAddress(poolNames::branchIDListBranchName().c_str(), &branchIDListsPtr);
-    }
-    if (metaDataTree->FindBranch(poolNames::parameterSetIDListBranchName().c_str()) != 0) {
-      metaDataTree->SetBranchAddress(poolNames::parameterSetIDListBranchName().c_str(), &parameterSetIDListsPtr);
-    }
-    if (metaDataTree->FindBranch(poolNames::productDependenciesBranchName().c_str()) != 0) {
-      metaDataTree->SetBranchAddress(poolNames::productDependenciesBranchName().c_str(), &branchChildrenBuffer);
-    }
+
+    FileID *fidPtr = &fid_;
     if (metaDataTree->FindBranch(poolNames::fileIdentifierBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::fileIdentifierBranchName().c_str(), &fidPtr);
     }
+
+    FileIndex *findexPtr = &fileIndex_;
     if (metaDataTree->FindBranch(poolNames::fileIndexBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::fileIndexBranchName().c_str(), &findexPtr);
     }
+
+    // Need to read to a temporary registry so we can do a translation of the BranchKeys.
+    // This preserves backward compatibility against friendly class name algorithm changes.
+    ProductRegistry tempReg;
+    ProductRegistry *ppReg = &tempReg;
+    metaDataTree->SetBranchAddress(poolNames::productDescriptionBranchName().c_str(),(&ppReg));
+
+    typedef std::map<ParameterSetID, ParameterSetBlob> PsetMap;
+    PsetMap psetMap;
+    PsetMap *psetMapPtr = &psetMap;
+    metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
+
+    ProcessHistoryRegistry::collection_type pHistMap;
+    ProcessHistoryRegistry::collection_type *pHistMapPtr = &pHistMap;
+    metaDataTree->SetBranchAddress(poolNames::processHistoryMapBranchName().c_str(), &pHistMapPtr);
+
+    std::auto_ptr<BranchIDListRegistry::collection_type> branchIDListsAPtr(new BranchIDListRegistry::collection_type);
+    BranchIDListRegistry::collection_type *branchIDListsPtr = branchIDListsAPtr.get();
+    if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::branchIDListBranchName().c_str(), &branchIDListsPtr);
+    }
+
+    std::auto_ptr<ParameterSetIDListRegistry::collection_type> parameterSetIDListsAPtr(new ParameterSetIDListRegistry::collection_type);
+    ParameterSetIDListRegistry::collection_type *parameterSetIDListsPtr = parameterSetIDListsAPtr.get();
+    if (metaDataTree->FindBranch(poolNames::parameterSetIDListBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::parameterSetIDListBranchName().c_str(), &parameterSetIDListsPtr);
+    }
+
+    BranchChildren* branchChildrenBuffer = branchChildren_.get();
+    if (metaDataTree->FindBranch(poolNames::productDependenciesBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::productDependenciesBranchName().c_str(), &branchChildrenBuffer);
+    }
+
+    // backward compatibility
+    std::vector<EventProcessHistoryID> *eventHistoryIDsPtr = &eventProcessHistoryIDs_;
     if (metaDataTree->FindBranch(poolNames::eventHistoryBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::eventHistoryBranchName().c_str(), &eventHistoryIDsPtr);
     }
-    // backward compatibility
+
+    ModuleDescriptionRegistry::collection_type mdMap;
+    ModuleDescriptionRegistry::collection_type *mdMapPtr = &mdMap;
     if (metaDataTree->FindBranch(poolNames::moduleDescriptionMapBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::moduleDescriptionMapBranchName().c_str(), &mdMapPtr);
     }
     input::getEntry(metaDataTree, 0);
+    branchIDLists_.reset(branchIDListsAPtr.release());
+    parameterSetIDLists_.reset(parameterSetIDListsAPtr.release());
 
-    readParentageTree();
+    // Merge into the hashed registries.
+    pset::Registry& psetRegistry = *pset::Registry::instance();
+    for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
+      psetRegistry.insertMapped(ParameterSet(i->second.pset_));
+    } 
+    ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
+    ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
 
     validateFile();
+    readParentageTree();
 
     initializeDuplicateChecker();
     if (noEventSort_) fileIndex_.sortBy_Run_Lumi_EventEntry();
@@ -208,6 +218,7 @@ namespace edm {
     // freeze our temporary product registry
     tempReg.setFrozen();
 
+    ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
     std::auto_ptr<ProductRegistry> newReg(new ProductRegistry);
 
     // Do the translation from the old registry to the new one
@@ -240,71 +251,7 @@ namespace edm {
       groupSelector_.initialize(groupSelectorRules, productRegistry()->allBranchDescriptions());
     }
 
-    // Merge into the registries. For now, we do NOT merge the product registry.
-    pset::Registry& psetRegistry = *pset::Registry::instance();
-    for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
-      psetRegistry.insertMapped(ParameterSet(i->second.pset_));
-    } 
-    ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
-    ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
-    branchIDLists_.reset(branchIDListsAPtr.release());
-    parameterSetIDLists_.reset(parameterSetIDListsAPtr.release());
-
-    ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
-
-    // Do drop on input. On the first pass, just fill in a set of branches to be dropped.
-    std::set<BranchID> branchesToDrop;
-    for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end();
-        it != itEnd; ++it) {
-      BranchDescription const& prod = it->second;
-      if(!selected(prod)) {
-        branchChildren_->appendToDescendents(prod.branchID(), branchesToDrop);
-      }
-    }
-
-    // On this pass, actually drop the branches.
-    std::set<BranchID>::const_iterator branchesToDropEnd = branchesToDrop.end();
-    for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
-        it != itEnd;) {
-      BranchDescription const& prod = it->second;
-      bool drop = branchesToDrop.find(prod.branchID()) != branchesToDropEnd;
-      if(drop) {
-	if (selected(prod)) {
-          LogWarning("RootFile")
-            << "Branch '" << prod.branchName() << "' is being dropped from the input\n"
-            << "of file '" << file_ << "' because it is dependent on a branch\n" 
-            << "that was explicitly dropped.\n";
-	}
-        treePointers_[prod.branchType()]->dropBranch(newBranchToOldBranch(prod.branchName()));
-        ProductRegistry::ProductList::iterator icopy = it;
-        ++it;
-        prodList.erase(icopy);
-      } else {
-        ++it;
-      }
-    }
-
-    // Drop on input mergeable run and lumi products, this needs to be invoked for
-    // secondary file input
-    if (dropMergeable) {
-      for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
-          it != itEnd;) {
-        BranchDescription const& prod = it->second;
-        if (prod.branchType() != InEvent) {
-          TClass *cp = gROOT->GetClass(prod.wrappedName().c_str());
-          boost::shared_ptr<EDProduct> dummy(static_cast<EDProduct *>(cp->New()));
-          if (dummy->isMergeable()) {
-            treePointers_[prod.branchType()]->dropBranch(newBranchToOldBranch(prod.branchName()));
-            ProductRegistry::ProductList::iterator icopy = it;
-            ++it;
-            prodList.erase(icopy);
-          } else {
-            ++it;
-          }
-        }
-        else ++it;
-      }
-    }
+    dropOnInput(prodList, dropMergeable);
 
     // Set up information from the product registry.
     for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
@@ -335,12 +282,12 @@ namespace edm {
     EntryDescriptionID* pidBuffer = &idBuffer;
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionIDBranchName().c_str(), &pidBuffer);
 
+    EntryDescriptionRegistry& oldregistry = *EntryDescriptionRegistry::instance();
+
     if (fileFormatVersion_.value_ <= 8) {
       EntryDescription entryDescriptionBuffer;
       EntryDescription *pEntryDescriptionBuffer = &entryDescriptionBuffer;
       entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), &pEntryDescriptionBuffer);
-
-      EntryDescriptionRegistry& registry = *EntryDescriptionRegistry::instance();
 
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
         input::getEntry(entryDescriptionTree, i);
@@ -349,20 +296,23 @@ namespace edm {
 	// This discards the parentage information, for now.
 	EventEntryDescription eid;
 	eid.moduleDescriptionID() = entryDescriptionBuffer.moduleDescriptionID();
-        registry.insertMapped(eid);
+        oldregistry.insertMapped(eid);
       }
     } else {
       EventEntryDescription entryDescriptionBuffer;
       EventEntryDescription *pEntryDescriptionBuffer = &entryDescriptionBuffer;
       entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), &pEntryDescriptionBuffer);
 
-      EntryDescriptionRegistry& registry = *EntryDescriptionRegistry::instance();
+      ParentageRegistry& registry = *ParentageRegistry::instance();
 
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
 	  throw edm::Exception(edm::errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
-        registry.insertMapped(entryDescriptionBuffer);
+        oldregistry.insertMapped(entryDescriptionBuffer);
+	Parentage parents;
+	parents.parents() = entryDescriptionBuffer.parents();
+        registry.insertMapped(parents);
       }
     }
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionIDBranchName().c_str(), 0);
@@ -1091,6 +1041,63 @@ namespace edm {
                                 fileIndex_);
       }
       eventTree_.setEntryNumber(-1);
+    }
+  }
+
+  void
+  RootFile::dropOnInput (ProductRegistry::ProductList& prodList, bool dropMergeable) {
+    // Do drop on input. On the first pass, just fill in a set of branches to be dropped.
+    std::set<BranchID> branchesToDrop;
+    for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end();
+        it != itEnd; ++it) {
+      BranchDescription const& prod = it->second;
+      if(!selected(prod)) {
+        branchChildren_->appendToDescendents(prod.branchID(), branchesToDrop);
+      }
+    }
+
+    // On this pass, actually drop the branches.
+    std::set<BranchID>::const_iterator branchesToDropEnd = branchesToDrop.end();
+    for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
+        it != itEnd;) {
+      BranchDescription const& prod = it->second;
+      bool drop = branchesToDrop.find(prod.branchID()) != branchesToDropEnd;
+      if(drop) {
+	if (selected(prod)) {
+          LogWarning("RootFile")
+            << "Branch '" << prod.branchName() << "' is being dropped from the input\n"
+            << "of file '" << file_ << "' because it is dependent on a branch\n" 
+            << "that was explicitly dropped.\n";
+	}
+        treePointers_[prod.branchType()]->dropBranch(newBranchToOldBranch(prod.branchName()));
+        ProductRegistry::ProductList::iterator icopy = it;
+        ++it;
+        prodList.erase(icopy);
+      } else {
+        ++it;
+      }
+    }
+
+    // Drop on input mergeable run and lumi products, this needs to be invoked for
+    // secondary file input
+    if (dropMergeable) {
+      for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
+          it != itEnd;) {
+        BranchDescription const& prod = it->second;
+        if (prod.branchType() != InEvent) {
+          TClass *cp = gROOT->GetClass(prod.wrappedName().c_str());
+          boost::shared_ptr<EDProduct> dummy(static_cast<EDProduct *>(cp->New()));
+          if (dummy->isMergeable()) {
+            treePointers_[prod.branchType()]->dropBranch(newBranchToOldBranch(prod.branchName()));
+            ProductRegistry::ProductList::iterator icopy = it;
+            ++it;
+            prodList.erase(icopy);
+          } else {
+            ++it;
+          }
+        }
+        else ++it;
+      }
     }
   }
 }
