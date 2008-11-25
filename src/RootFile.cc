@@ -3,6 +3,7 @@
 
 #include "RootFile.h"
 #include "DuplicateChecker.h"
+#include "ProvenanceAdaptor.h"
 
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/GlobalIdentifier.h"
@@ -108,7 +109,9 @@ namespace edm {
       eventHistoryTree_(0),
       history_(new History),
       branchChildren_(new BranchChildren),
-      duplicateChecker_(duplicateChecker) {
+      duplicateChecker_(duplicateChecker),
+      provenanceAdaptor_() {
+
     eventTree_.setCacheSize(treeCacheSize);
 
     eventTree_.setTreeMaxVirtualSize(treeMaxVirtualSize);
@@ -160,12 +163,18 @@ namespace edm {
     BranchIDListRegistry::collection_type *branchIDListsPtr = branchIDListsAPtr.get();
     if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::branchIDListBranchName().c_str(), &branchIDListsPtr);
+      assert(fileFormatVersion_.value_ >= 11);
+    } else {
+      assert(fileFormatVersion_.value_ < 11);
     }
 
     std::auto_ptr<ParameterSetIDListRegistry::collection_type> parameterSetIDListsAPtr(new ParameterSetIDListRegistry::collection_type);
     ParameterSetIDListRegistry::collection_type *parameterSetIDListsPtr = parameterSetIDListsAPtr.get();
     if (metaDataTree->FindBranch(poolNames::parameterSetIDListBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::parameterSetIDListBranchName().c_str(), &parameterSetIDListsPtr);
+      assert(fileFormatVersion_.value_ >= 11);
+    } else {
+      assert(fileFormatVersion_.value_ < 11);
     }
 
     BranchChildren* branchChildrenBuffer = branchChildren_.get();
@@ -176,18 +185,27 @@ namespace edm {
     // backward compatibility
     std::vector<EventProcessHistoryID> *eventHistoryIDsPtr = &eventProcessHistoryIDs_;
     if (metaDataTree->FindBranch(poolNames::eventHistoryBranchName().c_str()) != 0) {
+      assert(fileFormatVersion_.value_ < 11);
       metaDataTree->SetBranchAddress(poolNames::eventHistoryBranchName().c_str(), &eventHistoryIDsPtr);
     }
 
     ModuleDescriptionRegistry::collection_type mdMap;
     ModuleDescriptionRegistry::collection_type *mdMapPtr = &mdMap;
     if (metaDataTree->FindBranch(poolNames::moduleDescriptionMapBranchName().c_str()) != 0) {
+      assert(fileFormatVersion_.value_ < 11);
       metaDataTree->SetBranchAddress(poolNames::moduleDescriptionMapBranchName().c_str(), &mdMapPtr);
     }
     // Here we read the metadata tree
     input::getEntry(metaDataTree, 0);
-    branchIDLists_.reset(branchIDListsAPtr.release());
-    parameterSetIDLists_.reset(parameterSetIDListsAPtr.release());
+
+    if (fileFormatVersion_.value_ < 11) {
+      provenanceAdaptor_.reset(new ProvenanceAdaptor(*productRegistry(), pHistMap, psetMap, mdMap));
+      branchIDLists_.reset(provenanceAdaptor_->branchIDLists());
+      parameterSetIDLists_.reset(provenanceAdaptor_->parameterSetIDLists());
+    } else {
+      branchIDLists_.reset(branchIDListsAPtr.release());
+      parameterSetIDLists_.reset(parameterSetIDListsAPtr.release());
+    }
 
     // Merge into the hashed registries.
     pset::Registry& psetRegistry = *pset::Registry::instance();

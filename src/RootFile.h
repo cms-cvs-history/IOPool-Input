@@ -49,6 +49,7 @@ namespace edm {
   // Class RootFile: supports file reading.
 
   class DuplicateChecker;
+  class ProvenanceAdaptor;
   class GroupSelectorRules;
 
   class RootFile : private boost::noncopyable {
@@ -75,7 +76,7 @@ namespace edm {
              bool dropMetaData,
 	     GroupSelectorRules const& groupSelectorRules,
              bool dropMergeable,
-             boost::shared_ptr<edm::DuplicateChecker> duplicateChecker);
+             boost::shared_ptr<DuplicateChecker> duplicateChecker);
     void reportOpened();
     void close(bool reallyClose);
     std::auto_ptr<EventPrincipal> readCurrentEvent(
@@ -189,7 +190,8 @@ namespace edm {
     TTree * eventHistoryTree_;
     boost::shared_ptr<History> history_;    
     boost::shared_ptr<BranchChildren> branchChildren_;
-    boost::shared_ptr<edm::DuplicateChecker> duplicateChecker_;
+    boost::shared_ptr<DuplicateChecker> duplicateChecker_;
+    boost::shared_ptr<ProvenanceAdaptor> provenanceAdaptor_;
   }; // class RootFile
 
   template <typename T>
