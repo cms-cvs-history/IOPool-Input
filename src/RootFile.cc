@@ -10,6 +10,7 @@
 #include "DataFormats/Provenance/interface/BranchType.h"
 #include "FWCore/Framework/interface/FileBlock.h"
 #include "FWCore/Framework/interface/EventPrincipal.h"
+#include "FWCore/Framework/interface/GroupSelector.h"
 #include "FWCore/Framework/interface/LuminosityBlockPrincipal.h"
 #include "FWCore/Framework/interface/RunPrincipal.h"
 #include "DataFormats/Provenance/interface/BranchChildren.h"
@@ -90,7 +91,6 @@ namespace edm {
       noEventSort_(noEventSort),
       fastClonable_(false),
       dropMetaData_(dropMetaData),
-      groupSelector_(),
       reportToken_(0),
       eventAux_(),
       lumiAux_(),
@@ -184,6 +184,7 @@ namespace edm {
     if (metaDataTree->FindBranch(poolNames::moduleDescriptionMapBranchName().c_str()) != 0) {
       metaDataTree->SetBranchAddress(poolNames::moduleDescriptionMapBranchName().c_str(), &mdMapPtr);
     }
+    // Here we read the metadata tree
     input::getEntry(metaDataTree, 0);
     branchIDLists_.reset(branchIDListsAPtr.release());
     parameterSetIDLists_.reset(parameterSetIDListsAPtr.release());
@@ -246,15 +247,13 @@ namespace edm {
       // freeze the product registry
       newReg->setFrozen();
       productRegistry_.reset(newReg.release());
-      // This is the selector for drop on input.
-      groupSelector_.initialize(groupSelectorRules, productRegistry()->allBranchDescriptions());
     }
 
-    ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
-    dropOnInput(prodList, dropMergeable);
+    dropOnInput(groupSelectorRules, dropMergeable);
 
     // Set up information from the product registry.
-    for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
+    ProductRegistry::ProductList const& prodList = productRegistry()->productList();
+    for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end();
         it != itEnd; ++it) {
       BranchDescription const& prod = it->second;
       treePointers_[prod.branchType()]->addBranch(it->first, prod,
@@ -895,7 +894,9 @@ namespace edm {
 	new RunPrincipal(runAux_,
 			 pReg,
 			 processConfiguration_,
-			 makeBranchMapper<ProductProvenance>(runTree_, InRun),
+		         fileFormatVersion().value_ <= 10 && fileFormatVersion().value_ >= 8 ?
+		         makeBranchMapper<RunLumiEntryInfo>(runTree_, InRun) :
+		         makeBranchMapper<ProductProvenance>(runTree_, InRun),
 			 runTree_.makeDelayedReader()));
     // Create a group in the run for each product
     runTree_.fillGroups(*thisRun);
@@ -952,6 +953,8 @@ namespace edm {
     boost::shared_ptr<LuminosityBlockPrincipal> thisLumi(
 	new LuminosityBlockPrincipal(lumiAux_,
 				     pReg, processConfiguration_,
+				     fileFormatVersion().value_ <= 10 && fileFormatVersion().value_ >= 8 ?
+				     makeBranchMapper<RunLumiEntryInfo>(lumiTree_, InLumi) :
 				     makeBranchMapper<ProductProvenance>(lumiTree_, InLumi),
 				     lumiTree_.makeDelayedReader()));
     // Create a group in the lumi for each product
@@ -1026,12 +1029,6 @@ namespace edm {
 	<< "Failed to find the event history tree\n";
   }
 
-  bool
-  RootFile::selected(BranchDescription const& desc) const {
-    return groupSelector_.selected(desc);
-  }
-
-
   void
   RootFile::initializeDuplicateChecker() {
     if (duplicateChecker_.get() != 0) {
@@ -1045,13 +1042,18 @@ namespace edm {
   }
 
   void
-  RootFile::dropOnInput (ProductRegistry::ProductList& prodList, bool dropMergeable) {
+  RootFile::dropOnInput (GroupSelectorRules const& rules, bool dropMergeable) {
+    // This is the selector for drop on input.
+    GroupSelector groupSelector;
+    groupSelector.initialize(rules, productRegistry()->allBranchDescriptions());
+
+    ProductRegistry::ProductList& prodList = const_cast<ProductRegistry::ProductList&>(productRegistry()->productList());
     // Do drop on input. On the first pass, just fill in a set of branches to be dropped.
     std::set<BranchID> branchesToDrop;
     for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end();
         it != itEnd; ++it) {
       BranchDescription const& prod = it->second;
-      if(!selected(prod)) {
+      if(!groupSelector.selected(prod)) {
         branchChildren_->appendToDescendents(prod.branchID(), branchesToDrop);
       }
     }
@@ -1063,7 +1065,7 @@ namespace edm {
       BranchDescription const& prod = it->second;
       bool drop = branchesToDrop.find(prod.branchID()) != branchesToDropEnd;
       if(drop) {
-	if (selected(prod)) {
+	if (groupSelector.selected(prod)) {
           LogWarning("RootFile")
             << "Branch '" << prod.branchName() << "' is being dropped from the input\n"
             << "of file '" << file_ << "' because it is dependent on a branch\n" 

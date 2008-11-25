@@ -18,7 +18,6 @@ RootFile.h // used by ROOT input sources
 
 #include "RootTree.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/GroupSelector.h"
 #include "FWCore/Framework/interface/InputSource.h"
 #include "DataFormats/Provenance/interface/BranchChildren.h"
 #include "DataFormats/Provenance/interface/BranchIDListRegistry.h"
@@ -50,6 +49,7 @@ namespace edm {
   // Class RootFile: supports file reading.
 
   class DuplicateChecker;
+  class GroupSelectorRules;
 
   class RootFile : private boost::noncopyable {
   public:
@@ -138,12 +138,11 @@ namespace edm {
     void overrideRunNumber(LuminosityBlockID & id);
     void overrideRunNumber(EventID & id, bool isRealData);
     std::string const& newBranchToOldBranch(std::string const& newBranch) const;
-    void dropOnInput(ProductRegistry::ProductList& prodList, bool dropMergeable);
+    void dropOnInput(GroupSelectorRules const& rules, bool dropMergeable);
     void readParentageTree();
     void readEntryDescriptionTree();
     void readEventHistoryTree();
 
-    bool selected(BranchDescription const& desc) const;
     void initializeDuplicateChecker();
 
     template <typename T>
@@ -173,7 +172,6 @@ namespace edm {
     bool noEventSort_;
     bool fastClonable_;
     bool dropMetaData_;
-    GroupSelector groupSelector_;
     JobReport::Token reportToken_;
     EventAuxiliary eventAux_;
     LuminosityBlockAuxiliary lumiAux_;
