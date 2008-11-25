@@ -218,7 +218,6 @@ namespace edm {
     // freeze our temporary product registry
     tempReg.setFrozen();
 
-    ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
     std::auto_ptr<ProductRegistry> newReg(new ProductRegistry);
 
     // Do the translation from the old registry to the new one
@@ -251,6 +250,7 @@ namespace edm {
       groupSelector_.initialize(groupSelectorRules, productRegistry()->allBranchDescriptions());
     }
 
+    ProductRegistry::ProductList & prodList  = const_cast<ProductRegistry::ProductList &>(productRegistry()->productList());
     dropOnInput(prodList, dropMergeable);
 
     // Set up information from the product registry.
