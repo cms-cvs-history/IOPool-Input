@@ -25,7 +25,6 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/EventAuxiliary.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockAuxiliary.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
-#include "DataFormats/Provenance/interface/ParameterSetIDListRegistry.h"
 #include "DataFormats/Provenance/interface/ProductStatus.h"
 #include "DataFormats/Provenance/interface/RunAuxiliary.h"
 #include "DataFormats/Provenance/interface/FileFormatVersion.h"
@@ -90,7 +89,6 @@ namespace edm {
     boost::shared_ptr<RunPrincipal> readRun(boost::shared_ptr<ProductRegistry const> pReg);
     boost::shared_ptr<ProductRegistry const> productRegistry() const {return productRegistry_;}
     BranchIDListRegistry::collection_type const& branchIDLists() {return *branchIDLists_;}
-    ParameterSetIDListRegistry::collection_type const& parameterSetIDLists() {return *parameterSetIDLists_;}
     EventAuxiliary const& eventAux() const {return eventAux_;}
     LuminosityBlockAuxiliary const& luminosityBlockAux() {return lumiAux_;}
     RunAuxiliary const& runAux() const {return runAux_;}
@@ -183,7 +181,6 @@ namespace edm {
     RootTreePtrArray treePointers_;
     boost::shared_ptr<ProductRegistry const> productRegistry_;
     boost::shared_ptr<BranchIDListRegistry::collection_type const> branchIDLists_;
-    boost::shared_ptr<ParameterSetIDListRegistry::collection_type const> parameterSetIDLists_;
     InputSource::ProcessingMode processingMode_;
     int forcedRunOffset_;
     std::map<std::string, std::string> newBranchToOldBranch_;

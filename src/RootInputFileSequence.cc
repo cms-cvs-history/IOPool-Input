@@ -91,7 +91,6 @@ namespace edm {
         }
         productRegistryUpdate().updateFromInput(rootFile_->productRegistry()->productList());
         BranchIDListHelper::updateFromInput(rootFile_->branchIDLists(), fileIter_->fileName());
-        BranchIDListHelper::updateFromInput(rootFile_->parameterSetIDLists(), fileIter_->fileName());
       }
     } else {
       Service<RandomNumberGenerator> rng;
@@ -211,7 +210,6 @@ namespace edm {
         throw edm::Exception(errors::MismatchedInputFiles,"RootInputFileSequence::nextFile()") << mergeInfo;
       }
       BranchIDListHelper::updateFromInput(rootFile_->branchIDLists(), fileIter_->fileName());
-      BranchIDListHelper::updateFromInput(rootFile_->parameterSetIDLists(), fileIter_->fileName());
     }
     return true;
   }
@@ -237,7 +235,6 @@ namespace edm {
         throw edm::Exception(errors::MismatchedInputFiles,"RootInputFileSequence::previousEvent()") << mergeInfo;
       }
       BranchIDListHelper::updateFromInput(rootFile_->branchIDLists(), fileIter_->fileName());
-      BranchIDListHelper::updateFromInput(rootFile_->parameterSetIDLists(), fileIter_->fileName());
     }
     if (rootFile_) rootFile_->setToLastEntry();
     return true;
