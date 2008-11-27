@@ -185,7 +185,7 @@ namespace edm {
 
     if (fileFormatVersion_.value_ < 11) {
       provenanceAdaptor_.reset(new ProvenanceAdaptor(*productRegistry(), pHistMap, psetMap, mdMap));
-      branchIDLists_.reset(provenanceAdaptor_->branchIDLists());
+      branchIDLists_.reset(provenanceAdaptor_->branchIDLists().release());
     } else {
       branchIDLists_.reset(branchIDListsAPtr.release());
     }
