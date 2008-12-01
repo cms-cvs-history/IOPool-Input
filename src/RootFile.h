@@ -75,7 +75,8 @@ namespace edm {
              bool dropMetaData,
 	     GroupSelectorRules const& groupSelectorRules,
              bool dropMergeable,
-             boost::shared_ptr<DuplicateChecker> duplicateChecker);
+             boost::shared_ptr<DuplicateChecker> duplicateChecker,
+             bool dropDescendantsOfDroppedProducts);
     void reportOpened();
     void close(bool reallyClose);
     std::auto_ptr<EventPrincipal> readCurrentEvent(
@@ -137,7 +138,7 @@ namespace edm {
     void overrideRunNumber(LuminosityBlockID & id);
     void overrideRunNumber(EventID & id, bool isRealData);
     std::string const& newBranchToOldBranch(std::string const& newBranch) const;
-    void dropOnInput(GroupSelectorRules const& rules, bool dropMergeable);
+    void dropOnInput(GroupSelectorRules const& rules, bool dropDescendants, bool dropMergeable);
     void readParentageTree();
     void readEntryDescriptionTree();
     void readEventHistoryTree();

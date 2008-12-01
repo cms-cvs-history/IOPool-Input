@@ -222,7 +222,7 @@ namespace edm {
   }
 
   void
-  PoolSource::fillDescription(edm::ParameterSetDescription& iDesc,
+  PoolSource::fillDescription(ParameterSetDescription& iDesc,
                               std::string const& moduleLabel) {
 
     iDesc.addOptionalUntracked<unsigned int>("firstRun", 1U);
@@ -238,6 +238,7 @@ namespace edm {
 
     iDesc.addOptionalUntracked<bool>("noEventSort", false);
     iDesc.addOptionalUntracked<bool>("skipBadFiles", false);
+    iDesc.addOptionalUntracked<bool>("dropDescendantsOfDroppedBranches", true);
     iDesc.addOptionalUntracked<unsigned int>("cacheSize", 0U);
     iDesc.addOptionalUntracked<int>("treeMaxVirtualSize", -1);
     iDesc.addOptionalUntracked<unsigned int>("setRunNumber", 0U);

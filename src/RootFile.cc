@@ -67,7 +67,8 @@ namespace edm {
 		     bool dropMetaData,
 		     GroupSelectorRules const& groupSelectorRules,
                      bool dropMergeable,
-                     boost::shared_ptr<edm::DuplicateChecker> duplicateChecker) :
+                     boost::shared_ptr<DuplicateChecker> duplicateChecker,
+                     bool dropDescendants) :
       file_(fileName),
       logicalFile_(logicalFileName),
       catalog_(catalogName),
@@ -124,7 +125,7 @@ namespace edm {
     // Read the metadata tree.
     TTree *metaDataTree = dynamic_cast<TTree *>(filePtr_->Get(poolNames::metaDataTreeName().c_str()));
     if (!metaDataTree)
-      throw edm::Exception(edm::errors::EventCorruption) << "Could not find tree " << poolNames::metaDataTreeName()
+      throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::metaDataTreeName()
 							 << " in the input file.";
 
     // To keep things simple, we just read in every possible branch that exists.
@@ -250,7 +251,7 @@ namespace edm {
       productRegistry_.reset(newReg.release());
     }
 
-    dropOnInput(groupSelectorRules, dropMergeable);
+    dropOnInput(groupSelectorRules, dropDescendants, dropMergeable);
 
     // Set up information from the product registry.
     ProductRegistry::ProductList const& prodList = productRegistry()->productList();
@@ -274,7 +275,7 @@ namespace edm {
     if (fileFormatVersion_.value_ < 6) return; 
     TTree* entryDescriptionTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::entryDescriptionTreeName().c_str()));
     if (!entryDescriptionTree) 
-      throw edm::Exception(edm::errors::EventCorruption) << "Could not find tree " << poolNames::entryDescriptionTreeName()
+      throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::entryDescriptionTreeName()
 							 << " in the input file.";
 
 
@@ -292,7 +293,7 @@ namespace edm {
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
-	  throw edm::Exception(edm::errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
+	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
 	// This discards the parentage information, for now.
 	EventEntryDescription eid;
 	eid.moduleDescriptionID() = entryDescriptionBuffer.moduleDescriptionID();
@@ -308,7 +309,7 @@ namespace edm {
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
-	  throw edm::Exception(edm::errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
+	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
         oldregistry.insertMapped(entryDescriptionBuffer);
 	Parentage parents;
 	parents.parents() = entryDescriptionBuffer.parents();
@@ -328,7 +329,7 @@ namespace edm {
     }
     TTree* parentageTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::parentageTreeName().c_str()));
     if (!parentageTree) 
-      throw edm::Exception(edm::errors::EventCorruption) << "Could not find tree " << poolNames::parentageTreeName()
+      throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::parentageTreeName()
 							 << " in the input file.";
 
     ParentageID idBuffer;
@@ -344,7 +345,7 @@ namespace edm {
     for (Long64_t i = 0, numEntries = parentageTree->GetEntries(); i < numEntries; ++i) {
       input::getEntry(parentageTree, i);
       if (idBuffer != parentageBuffer.id())
-        throw edm::Exception(edm::errors::EventCorruption) << "Corruption of Parentage tree detected.";
+        throw edm::Exception(errors::EventCorruption) << "Corruption of Parentage tree detected.";
       registry.insertMapped(parentageBuffer);
     }
     parentageTree->SetBranchAddress(poolNames::parentageIDBranchName().c_str(), 0);
@@ -648,7 +649,7 @@ namespace edm {
       fid_ = FileID(createGlobalIdentifier());
     }
     if(!eventTree_.isValid()) {
-      throw edm::Exception(edm::errors::EventCorruption) <<
+      throw edm::Exception(errors::EventCorruption) <<
 	 "'Events' tree is corrupted or not present\n" << "in the input file.";
     }
     if (fileIndex_.empty()) {
@@ -709,7 +710,7 @@ namespace edm {
       History* pHistory = history_.get();
       TBranch* eventHistoryBranch = eventHistoryTree_->GetBranch(poolNames::eventHistoryBranchName().c_str());
       if (!eventHistoryBranch)
-	throw edm::Exception(edm::errors::EventCorruption)
+	throw edm::Exception(errors::EventCorruption)
 	  << "Failed to find history branch in event history tree";
       eventHistoryBranch->SetAddress(&pHistory);
       input::getEntry(eventHistoryTree_, eventTree_.entryNumber());
@@ -1026,7 +1027,7 @@ namespace edm {
     eventHistoryTree_ = dynamic_cast<TTree*>(filePtr_->Get(poolNames::eventHistoryTreeName().c_str()));
 
     if (!eventHistoryTree_)
-      throw edm::Exception(edm::errors::EventCorruption)
+      throw edm::Exception(errors::EventCorruption)
 	<< "Failed to find the event history tree\n";
   }
 
@@ -1043,7 +1044,7 @@ namespace edm {
   }
 
   void
-  RootFile::dropOnInput (GroupSelectorRules const& rules, bool dropMergeable) {
+  RootFile::dropOnInput (GroupSelectorRules const& rules, bool dropDescendants, bool dropMergeable) {
     // This is the selector for drop on input.
     GroupSelector groupSelector;
     groupSelector.initialize(rules, productRegistry()->allBranchDescriptions());
@@ -1055,7 +1056,11 @@ namespace edm {
         it != itEnd; ++it) {
       BranchDescription const& prod = it->second;
       if(!groupSelector.selected(prod)) {
-        branchChildren_->appendToDescendents(prod.branchID(), branchesToDrop);
+        if (dropDescendants) {
+          branchChildren_->appendToDescendants(prod.branchID(), branchesToDrop);
+        } else {
+          branchesToDrop.insert(prod.branchID());
+        }
       }
     }
 
