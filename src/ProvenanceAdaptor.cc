@@ -84,7 +84,7 @@ namespace edm {
   }
 
   std::auto_ptr<BranchIDLists>
-  ProvenanceAdaptor::branchIDLists() {
+  ProvenanceAdaptor::branchIDLists() const {
     std::auto_ptr<BranchIDLists> pv(new BranchIDLists);
     std::auto_ptr<BranchIDList> p(new BranchIDList);
     std::string processName;
@@ -99,5 +99,9 @@ namespace edm {
     }
     pv->push_back(*p);
     return pv;
+  }
+
+  void
+  ProvenanceAdaptor::branchListIndexes(BranchListIndexes & indexes)  const {
   }
 }

@@ -36,7 +36,9 @@ namespace edm {
 	     ModuleDescriptionMap const&  mdMap);
 
   
-  std::auto_ptr<BranchIDLists> branchIDLists();
+  std::auto_ptr<BranchIDLists> branchIDLists() const;
+
+  void branchListIndexes(BranchListIndexes & indexes) const;
 
   private:
     ProductRegistry const& productRegistry_;

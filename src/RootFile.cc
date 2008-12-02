@@ -185,9 +185,12 @@ namespace edm {
     input::getEntry(metaDataTree, 0);
 
     if (fileFormatVersion_.value_ < 11) {
+      // Old format input file.  Create a provenance adaptor.
       provenanceAdaptor_.reset(new ProvenanceAdaptor(*productRegistry(), pHistMap, psetMap, mdMap));
+      // Fill in the branchIDLists branch from the provenance adaptor
       branchIDLists_.reset(provenanceAdaptor_->branchIDLists().release());
     } else {
+      // New format input file. The branchIDLists branch was read directly from the input file. 
       branchIDLists_.reset(branchIDListsAPtr.release());
     }
 
@@ -200,6 +203,8 @@ namespace edm {
     ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
 
     validateFile();
+
+    // Read the parentage tree.  Old format files are handled internally in readParentageTree().
     readParentageTree();
 
     initializeDuplicateChecker();
@@ -272,6 +277,7 @@ namespace edm {
 
   void
   RootFile::readEntryDescriptionTree() { 
+    // Called only for old format files.
     if (fileFormatVersion_.value_ < 6) return; 
     TTree* entryDescriptionTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::entryDescriptionTreeName().c_str()));
     if (!entryDescriptionTree) 
@@ -304,6 +310,7 @@ namespace edm {
       EventEntryDescription *pEntryDescriptionBuffer = &entryDescriptionBuffer;
       entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), &pEntryDescriptionBuffer);
 
+      // Fill in the parentage registry.
       ParentageRegistry& registry = *ParentageRegistry::instance();
 
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
@@ -324,9 +331,11 @@ namespace edm {
   RootFile::readParentageTree()
   { 
     if (fileFormatVersion_.value_ < 11) {
+      // Old format file.
       readEntryDescriptionTree();
       return;
     }
+    // New format file
     TTree* parentageTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::parentageTreeName().c_str()));
     if (!parentageTree) 
       throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::parentageTreeName()
@@ -593,6 +602,7 @@ namespace edm {
   void
   RootFile::fillFileIndex() {
     // This function is for backward compatibility only.
+    // Newer files store the file index.
     LuminosityBlockNumber_t lastLumi = 0;
     RunNumber_t lastRun = 0;
 
@@ -724,9 +734,13 @@ namespace edm {
           eventProcessHistoryIter_ = lower_bound_all(eventProcessHistoryIDs_, target);	
           assert(eventProcessHistoryIter_->eventID_ == eventAux_.id());
         }
-	history_->processHistoryID() = eventProcessHistoryIter_->processHistoryID_;
+	history_->setProcessHistoryID(eventProcessHistoryIter_->processHistoryID_);
         ++eventProcessHistoryIter_;
       }
+    }
+    if (fileFormatVersion_.value_ < 11) {
+      // old format.  branchListIndexes_ must be filled in from the ProvenanceAdaptor.
+      provenanceAdaptor_->branchListIndexes(history_->branchListIndexes());
     }
   }
 
@@ -1066,8 +1080,7 @@ namespace edm {
 
     // On this pass, actually drop the branches.
     std::set<BranchID>::const_iterator branchesToDropEnd = branchesToDrop.end();
-    for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
-        it != itEnd;) {
+    for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end(); it != itEnd;) {
       BranchDescription const& prod = it->second;
       bool drop = branchesToDrop.find(prod.branchID()) != branchesToDropEnd;
       if(drop) {
@@ -1089,8 +1102,7 @@ namespace edm {
     // Drop on input mergeable run and lumi products, this needs to be invoked for
     // secondary file input
     if (dropMergeable) {
-      for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end();
-          it != itEnd;) {
+      for (ProductRegistry::ProductList::iterator it = prodList.begin(), itEnd = prodList.end(); it != itEnd;) {
         BranchDescription const& prod = it->second;
         if (prod.branchType() != InEvent) {
           TClass *cp = gROOT->GetClass(prod.wrappedName().c_str());
