@@ -10,9 +10,9 @@ ProvenanceAdaptor.h
 #include <memory>
 #include <string>
 #include <vector>
+#include "boost/shared_ptr.hpp"
 #include "boost/utility.hpp"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
-#include "DataFormats/Provenance/interface/BranchID.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetID.h"
@@ -27,8 +27,6 @@ namespace edm {
   typedef std::map<ParameterSetID, ParameterSetBlob> ParameterSetMap;
   class ProvenanceAdaptor : private boost::noncopyable {
   public:
-  typedef std::pair<std::string, BranchID> Product;
-  typedef std::vector<Product> OrderedProducts;
   ProvenanceAdaptor(
 	     ProductRegistry const& productRegistry,
 	     ProcessHistoryMap const& pHistMap,
@@ -36,13 +34,14 @@ namespace edm {
 	     ModuleDescriptionMap const&  mdMap);
 
   
-  std::auto_ptr<BranchIDLists> branchIDLists() const;
+  boost::shared_ptr<BranchIDLists const> branchIDLists() const;
 
   void branchListIndexes(BranchListIndexes & indexes) const;
 
   private:
     ProductRegistry const& productRegistry_;
-    OrderedProducts orderedProducts_;
+    boost::shared_ptr<BranchIDLists const> branchIDLists_;
+    std::vector<BranchListIndex> branchListIndexes_;
   }; // class ProvenanceAdaptor
 
 }

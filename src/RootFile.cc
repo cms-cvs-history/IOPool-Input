@@ -188,7 +188,7 @@ namespace edm {
       // Old format input file.  Create a provenance adaptor.
       provenanceAdaptor_.reset(new ProvenanceAdaptor(*productRegistry(), pHistMap, psetMap, mdMap));
       // Fill in the branchIDLists branch from the provenance adaptor
-      branchIDLists_.reset(provenanceAdaptor_->branchIDLists().release());
+      branchIDLists_ = provenanceAdaptor_->branchIDLists();
     } else {
       // New format input file. The branchIDLists branch was read directly from the input file. 
       branchIDLists_.reset(branchIDListsAPtr.release());
