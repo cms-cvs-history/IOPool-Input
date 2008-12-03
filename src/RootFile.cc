@@ -186,7 +186,7 @@ namespace edm {
 
     if (fileFormatVersion_.value_ < 11) {
       // Old format input file.  Create a provenance adaptor.
-      provenanceAdaptor_.reset(new ProvenanceAdaptor(*productRegistry(), pHistMap, psetMap, mdMap));
+      provenanceAdaptor_.reset(new ProvenanceAdaptor(tempReg, pHistMap, psetMap, mdMap));
       // Fill in the branchIDLists branch from the provenance adaptor
       branchIDLists_ = provenanceAdaptor_->branchIDLists();
     } else {
@@ -842,7 +842,7 @@ namespace edm {
     overrideRunNumber(eventAux_.id_, eventAux_.isRealData());
 
     boost::shared_ptr<BranchMapper> mapper =
-       fileFormatVersion().value_ <= 10 && fileFormatVersion().value_ >= 8 ?
+       fileFormatVersion().value_ < 11 && fileFormatVersion().value_ >= 8 ?
        makeBranchMapper<EventEntryInfo>(eventTree_, InEvent) :
        makeBranchMapper<ProductProvenance>(eventTree_, InEvent);
 
@@ -853,7 +853,7 @@ namespace edm {
 		processConfiguration_,
 		history_,
 		mapper,
-		eventTree_.makeDelayedReader()));
+		eventTree_.makeDelayedReader(true, fileFormatVersion().value_ < 11)));
 
     // Create a group in the event for each product
     eventTree_.fillGroups(*thisEvent);

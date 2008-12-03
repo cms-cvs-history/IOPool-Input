@@ -60,11 +60,12 @@ namespace edm {
     std::set<std::string> processNamesThatProduced;
     ProductRegistry::ProductList const& prodList = productRegistry.productList();
     for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end(); it != itEnd; ++it) {
-      processNamesThatProduced.insert(it->second.processName());
-      orderedProducts.push_back(std::make_pair(it->second.processName(), it->second.branchID()));
+      if (it->second.branchType() == InEvent) {
+        processNamesThatProduced.insert(it->second.processName());
+        orderedProducts.push_back(std::make_pair(it->second.processName(), it->second.branchID()));
+      }
     }
     assert (!orderedProducts.empty());
-    if (processNamesThatProduced.size() == 1) return;
     Histories processHistories;
     size_t max = 0;
     for(ProcessHistoryMap::const_iterator it = pHistMap.begin(), itEnd = pHistMap.end(); it != itEnd; ++it) {
@@ -80,9 +81,6 @@ namespace edm {
       if (processHistory.size() > 1) {
         processHistories.insert(processHistory);
       }
-    }
-    if (processHistories.empty()) {
-      return;
     }
     stable_sort_all(orderedProducts, Sorter(processHistories));
 

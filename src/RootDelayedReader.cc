@@ -11,9 +11,16 @@
 namespace edm {
 
   RootDelayedReader::RootDelayedReader(EntryNumber const& entry,
- boost::shared_ptr<BranchMap const> bMap,
- boost::shared_ptr<TFile const> filePtr)
- : entryNumber_(entry), branches_(bMap), filePtr_(filePtr), nextReader_() {}
+      boost::shared_ptr<BranchMap const> bMap,
+      boost::shared_ptr<TFile const> filePtr,
+      bool customStreamers,
+      bool oldFormat) :
+   entryNumber_(entry),
+   branches_(bMap),
+   filePtr_(filePtr),
+   nextReader_(),
+   customStreamers_(customStreamers), 
+   oldFormat_(oldFormat) {}
 
   RootDelayedReader::~RootDelayedReader() {}
 
@@ -30,13 +37,13 @@ namespace edm {
       assert(nextReader_);
       return nextReader_->getProduct(k, ep);
     }
-    setRefCoreStreamer(ep);
+    if (customStreamers_) setRefCoreStreamer(ep, oldFormat_);
     TClass *cp = gROOT->GetClass(branchInfo.branchDescription_.wrappedName().c_str());
     std::auto_ptr<EDProduct> p(static_cast<EDProduct *>(cp->New()));
     EDProduct *pp = p.get();
     br->SetAddress(&pp);
     input::getEntry(br, entryNumber_);
-    setRefCoreStreamer();
+    if (customStreamers_) setRefCoreStreamer();
     return p;
   }
 }
