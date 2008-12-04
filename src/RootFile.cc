@@ -125,8 +125,8 @@ namespace edm {
     // Read the metadata tree.
     TTree *metaDataTree = dynamic_cast<TTree *>(filePtr_->Get(poolNames::metaDataTreeName().c_str()));
     if (!metaDataTree)
-      throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::metaDataTreeName()
-							 << " in the input file.";
+      throw edm::Exception(errors::FileReadError) << "Could not find tree " << poolNames::metaDataTreeName()
+							 << " in the input file.\n";
 
     // To keep things simple, we just read in every possible branch that exists.
     // We don't pay attention to which branches exist in which file format versions
@@ -191,6 +191,10 @@ namespace edm {
       branchIDLists_ = provenanceAdaptor_->branchIDLists();
     } else {
       // New format input file. The branchIDLists branch was read directly from the input file. 
+      if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) == 0) {
+	throw edm::Exception(errors::EventCorruption)
+	  << "Failed to find branchIDLists branch in metaData tree.\n";
+      }
       branchIDLists_.reset(branchIDListsAPtr.release());
     }
 
@@ -281,8 +285,8 @@ namespace edm {
     if (fileFormatVersion_.value_ < 6) return; 
     TTree* entryDescriptionTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::entryDescriptionTreeName().c_str()));
     if (!entryDescriptionTree) 
-      throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::entryDescriptionTreeName()
-							 << " in the input file.";
+      throw edm::Exception(errors::FileReadError) << "Could not find tree " << poolNames::entryDescriptionTreeName()
+							 << " in the input file.\n";
 
 
     EntryDescriptionID idBuffer;
@@ -299,7 +303,7 @@ namespace edm {
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
-	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
+	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.\n";
 	// This discards the parentage information, for now.
 	EventEntryDescription eid;
 	eid.moduleDescriptionID() = entryDescriptionBuffer.moduleDescriptionID();
@@ -316,7 +320,7 @@ namespace edm {
       for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
         input::getEntry(entryDescriptionTree, i);
         if (idBuffer != entryDescriptionBuffer.id())
-	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.";
+	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.\n";
         oldregistry.insertMapped(entryDescriptionBuffer);
 	Parentage parents;
 	parents.parents() = entryDescriptionBuffer.parents();
@@ -338,8 +342,8 @@ namespace edm {
     // New format file
     TTree* parentageTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::parentageTreeName().c_str()));
     if (!parentageTree) 
-      throw edm::Exception(errors::EventCorruption) << "Could not find tree " << poolNames::parentageTreeName()
-							 << " in the input file.";
+      throw edm::Exception(errors::FileReadError) << "Could not find tree " << poolNames::parentageTreeName()
+							 << " in the input file.\n";
 
     ParentageID idBuffer;
     ParentageID* pidBuffer = &idBuffer;
@@ -354,7 +358,7 @@ namespace edm {
     for (Long64_t i = 0, numEntries = parentageTree->GetEntries(); i < numEntries; ++i) {
       input::getEntry(parentageTree, i);
       if (idBuffer != parentageBuffer.id())
-        throw edm::Exception(errors::EventCorruption) << "Corruption of Parentage tree detected.";
+        throw edm::Exception(errors::EventCorruption) << "Corruption of Parentage tree detected.\n";
       registry.insertMapped(parentageBuffer);
     }
     parentageTree->SetBranchAddress(poolNames::parentageIDBranchName().c_str(), 0);
@@ -660,7 +664,7 @@ namespace edm {
     }
     if(!eventTree_.isValid()) {
       throw edm::Exception(errors::EventCorruption) <<
-	 "'Events' tree is corrupted or not present\n" << "in the input file.";
+	 "'Events' tree is corrupted or not present\n" << "in the input file.\n";
     }
     if (fileIndex_.empty()) {
       fillFileIndex();
@@ -721,7 +725,7 @@ namespace edm {
       TBranch* eventHistoryBranch = eventHistoryTree_->GetBranch(poolNames::eventHistoryBranchName().c_str());
       if (!eventHistoryBranch)
 	throw edm::Exception(errors::EventCorruption)
-	  << "Failed to find history branch in event history tree";
+	  << "Failed to find history branch in event history tree.\n";
       eventHistoryBranch->SetAddress(&pHistory);
       input::getEntry(eventHistoryTree_, eventTree_.entryNumber());
     } else {
@@ -853,10 +857,13 @@ namespace edm {
 		processConfiguration_,
 		history_,
 		mapper,
-		eventTree_.makeDelayedReader(true, fileFormatVersion().value_ < 11)));
+		eventTree_.makeDelayedReader(true, fileFormatVersion_.value_ < 11)));
 
     // Create a group in the event for each product
     eventTree_.fillGroups(*thisEvent);
+    if (fileFormatVersion().value_ < 11 && fileFormatVersion().value_ >= 8) {
+      thisEvent->readProvenanceImmediate();
+    }
     return thisEvent;
   }
 
@@ -1042,7 +1049,7 @@ namespace edm {
 
     if (!eventHistoryTree_)
       throw edm::Exception(errors::EventCorruption)
-	<< "Failed to find the event history tree\n";
+	<< "Failed to find the event history tree.\n";
   }
 
   void
