@@ -33,7 +33,6 @@ namespace edm {
     RootDelayedReader(EntryNumber const& entry,
       boost::shared_ptr<BranchMap const> bMap,
       boost::shared_ptr<TFile const> filePtr,
-      bool customStreamers,
       bool oldFormat);
 
     virtual ~RootDelayedReader();

@@ -49,7 +49,7 @@ namespace edm {
     std::vector<std::string> const& branchNames() const {return branchNames_;}
     template <typename T>
     void fillGroups(T& item);
-    boost::shared_ptr<DelayedReader> makeDelayedReader(bool customStreamers = false, bool oldFormat = false) const;
+    boost::shared_ptr<DelayedReader> makeDelayedReader(bool oldFormat = false) const;
     template <typename T>
     boost::shared_ptr<BranchMapper> makeBranchMapper() const;
     //TBranch *auxBranch() {return auxBranch_;}

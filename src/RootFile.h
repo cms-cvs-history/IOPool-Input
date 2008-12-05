@@ -195,23 +195,13 @@ namespace edm {
   template <typename T>
   boost::shared_ptr<BranchMapper>
   RootFile::makeBranchMapper(RootTree & rootTree, BranchType const& type) const {
-    if (fileFormatVersion_.value_ >= 11) {
+    if (fileFormatVersion_.value_ >= 8) {
       boost::shared_ptr<BranchMapper> bm = rootTree.makeBranchMapper<T>();
       return bm;
     } 
     // backward compatibility
     boost::shared_ptr<BranchMapper> mapper(new BranchMapper);
-    if (fileFormatVersion_.value_ >= 8) {
-      std::vector<T> infoVector;
-      std::vector<T> * pInfoVector = &infoVector;
-      rootTree.branchEntryInfoBranch()->SetAddress(&pInfoVector);
-      input::getEntry(rootTree.branchEntryInfoBranch(), rootTree.entryNumber());
-      for (typename std::vector<T>::const_iterator it = infoVector.begin(), itEnd = infoVector.end(); it != itEnd; ++it) {
-	ProductProvenance entry(it->branchID(), it->productStatus());
-	mapper->insert(entry);
-	// QQQ it->productID()
-      }
-    } else if (fileFormatVersion_.value_ >= 7) {
+    if (fileFormatVersion_.value_ >= 7) {
       rootTree.fillStatus();
       for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
           itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {

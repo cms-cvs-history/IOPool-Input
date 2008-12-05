@@ -857,7 +857,7 @@ namespace edm {
 		processConfiguration_,
 		history_,
 		mapper,
-		eventTree_.makeDelayedReader(true, fileFormatVersion_.value_ < 11)));
+		eventTree_.makeDelayedReader(fileFormatVersion_.value_ < 11)));
 
     // Create a group in the event for each product
     eventTree_.fillGroups(*thisEvent);

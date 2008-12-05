@@ -4,10 +4,12 @@ BranchMapperWithReader:
 
 ----------------------------------------------------------------------*/
 #include "BranchMapperWithReader.h"
+#include "DataFormats/Common/interface/RefCoreStreamer.h"
 
 namespace edm {
   void
   BranchMapperWithReader<EventEntryInfo>::readProvenance_() const {
+    setRefCoreStreamer(0, true);
     branchPtr_->SetAddress(&pInfoVector_);
     input::getEntry(branchPtr_, entryNumber_);
     BranchMapperWithReader<EventEntryInfo> * me = const_cast<BranchMapperWithReader<EventEntryInfo> *>(this);
