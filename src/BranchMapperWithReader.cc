@@ -16,8 +16,13 @@ namespace edm {
     for (std::vector<EventEntryInfo>::const_iterator it = infoVector_.begin(), itEnd = infoVector_.end();
       it != itEnd; ++it) {
       me->insert(it->makeProductProvenance());
-      me->oldProductIDToBranchIDMap_.insert(std::make_pair(it->productID().oldID(), it->branchID()));
+      me->insertIntoMap(it->productID(), it->branchID());
     }
+  }
+
+  void
+  BranchMapperWithReader<EventEntryInfo>::insertIntoMap(ProductID const& oldProductID, BranchID const& branchID) {
+    oldProductIDToBranchIDMap_.insert(std::make_pair(oldProductID.oldID(), branchID));
   }
 
   BranchID

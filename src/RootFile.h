@@ -200,29 +200,48 @@ namespace edm {
       return bm;
     } 
     // backward compatibility
-    boost::shared_ptr<BranchMapper> mapper(new BranchMapper);
     if (fileFormatVersion_.value_ >= 7) {
       rootTree.fillStatus();
-      for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
-          itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
-        if (type == it->second.branchType() && !it->second.transient()) {
-	  input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
-	  input::BranchInfo const& ib = ix->second;
-	  TBranch *br = ib.provenanceBranch_;
-	  //TBranch *br = rootTree.branches().find(it->first)->second.provenanceBranch_;
-          std::auto_ptr<ParentageID> pb(new ParentageID);
-          ParentageID* ppb = pb.get();
-          br->SetAddress(&ppb);
-          input::getEntry(br, rootTree.entryNumber());
-	  std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
-	  ProductProvenance entry(it->second.branchID(),
-		  rootTree.productStatuses()[index], *pb);
-	  mapper->insert(entry);
-	  // QQQ it->second.oldProductID()
+      if (type == InEvent) {
+	boost::shared_ptr<BranchMapperWithReader<EventEntryInfo> > mapper(new BranchMapperWithReader<EventEntryInfo>(0, 0));
+	mapper->setDelayedRead(false);
+        for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
+            itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
+	  if (type == it->second.branchType() && !it->second.transient()) {
+	    input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
+	    input::BranchInfo const& ib = ix->second;
+	    TBranch *br = ib.provenanceBranch_;
+            std::auto_ptr<EntryDescriptionID> pb(new EntryDescriptionID);
+            EntryDescriptionID* ppb = pb.get();
+            br->SetAddress(&ppb);
+            input::getEntry(br, rootTree.entryNumber());
+	    std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
+	    EventEntryInfo entry(it->second.branchID(), rootTree.productStatuses()[index], it->second.oldProductID(), *pb);
+	    mapper->insert(entry.makeProductProvenance());
+	    mapper->insertIntoMap(it->second.oldProductID(), it->second.branchID());
+          }
         }
+        return mapper;
+      } else {
+	boost::shared_ptr<BranchMapperWithReader<ProductProvenance> > mapper(new BranchMapperWithReader<ProductProvenance>(0, 0));
+	mapper->setDelayedRead(false);
+        for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
+            itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
+	  if (type == it->second.branchType() && !it->second.transient()) {
+	    input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
+	    input::BranchInfo const& ib = ix->second;
+	    TBranch *br = ib.provenanceBranch_;
+            input::getEntry(br, rootTree.entryNumber());
+	    std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
+	    ProductProvenance entry(it->second.branchID(), rootTree.productStatuses()[index]);
+	    mapper->insert(entry);
+	  }
+        }
+        return mapper;
       }
-    } else {
+    }
 /*
+    else {
       for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
           itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
         if (type == it->second.branchType() && !it->second.transient()) {
@@ -239,10 +258,10 @@ namespace edm {
 	  // QQQ it->second.oldProductID()
        }
       }
-*/
     }
+*/
     // end backward compatibility
-    return mapper;
+    return boost::shared_ptr<BranchMapper>();
   }
 
 }

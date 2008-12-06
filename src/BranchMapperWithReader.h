@@ -64,6 +64,8 @@ namespace edm {
 
     virtual ~BranchMapperWithReader() {}
 
+    void insertIntoMap(ProductID const& oldProductID, BranchID const& branchID);
+
   private:
     virtual void readProvenance_() const;
     virtual BranchID oldProductIDToBranchID_(ProductID const& oldProductID) const;

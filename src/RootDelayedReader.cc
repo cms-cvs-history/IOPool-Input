@@ -41,7 +41,7 @@ namespace edm {
     EDProduct *pp = p.get();
     br->SetAddress(&pp);
     input::getEntry(br, entryNumber_);
-    resetRefCoreStreamer(oldFormat_);
+    setRefCoreStreamer(oldFormat_);
     return p;
   }
 }

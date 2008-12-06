@@ -61,6 +61,7 @@ namespace edm {
     ProductRegistry::ProductList const& prodList = productRegistry.productList();
     for (ProductRegistry::ProductList::const_iterator it = prodList.begin(), itEnd = prodList.end(); it != itEnd; ++it) {
       if (it->second.branchType() == InEvent) {
+	it->second.init();
         processNamesThatProduced.insert(it->second.processName());
         orderedProducts.push_back(std::make_pair(it->second.processName(), it->second.branchID()));
       }

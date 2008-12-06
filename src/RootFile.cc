@@ -21,6 +21,7 @@
 #include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/Provenance/interface/RunID.h"
+#include "DataFormats/Common/interface/RefCoreStreamer.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -122,6 +123,8 @@ namespace edm {
     treePointers_[InLumi]  = &lumiTree_;
     treePointers_[InRun]   = &runTree_;
 
+    setRefCoreStreamer(0, true); // backward compatibility
+
     // Read the metadata tree.
     TTree *metaDataTree = dynamic_cast<TTree *>(filePtr_->Get(poolNames::metaDataTreeName().c_str()));
     if (!metaDataTree)
@@ -183,6 +186,8 @@ namespace edm {
     }
     // Here we read the metadata tree
     input::getEntry(metaDataTree, 0);
+
+    setRefCoreStreamer(true);  // backward compatibility
 
     if (fileFormatVersion_.value_ < 11) {
       // Old format input file.  Create a provenance adaptor.
@@ -280,9 +285,9 @@ namespace edm {
   }
 
   void
-  RootFile::readEntryDescriptionTree() { 
+  RootFile::readEntryDescriptionTree() {
     // Called only for old format files.
-    if (fileFormatVersion_.value_ < 6) return; 
+    if (fileFormatVersion_.value_ < 8) return; 
     TTree* entryDescriptionTree = dynamic_cast<TTree*>(filePtr_->Get(poolNames::entryDescriptionTreeName().c_str()));
     if (!entryDescriptionTree) 
       throw edm::Exception(errors::FileReadError) << "Could not find tree " << poolNames::entryDescriptionTreeName()
@@ -295,37 +300,21 @@ namespace edm {
 
     EntryDescriptionRegistry& oldregistry = *EntryDescriptionRegistry::instance();
 
-    if (fileFormatVersion_.value_ <= 8) {
-      EntryDescription entryDescriptionBuffer;
-      EntryDescription *pEntryDescriptionBuffer = &entryDescriptionBuffer;
-      entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), &pEntryDescriptionBuffer);
+    EventEntryDescription entryDescriptionBuffer;
+    EventEntryDescription *pEntryDescriptionBuffer = &entryDescriptionBuffer;
+    entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), &pEntryDescriptionBuffer);
 
-      for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
-        input::getEntry(entryDescriptionTree, i);
-        if (idBuffer != entryDescriptionBuffer.id())
-	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.\n";
-	// This discards the parentage information, for now.
-	EventEntryDescription eid;
-	eid.moduleDescriptionID() = entryDescriptionBuffer.moduleDescriptionID();
-        oldregistry.insertMapped(eid);
-      }
-    } else {
-      EventEntryDescription entryDescriptionBuffer;
-      EventEntryDescription *pEntryDescriptionBuffer = &entryDescriptionBuffer;
-      entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), &pEntryDescriptionBuffer);
+    // Fill in the parentage registry.
+    ParentageRegistry& registry = *ParentageRegistry::instance();
 
-      // Fill in the parentage registry.
-      ParentageRegistry& registry = *ParentageRegistry::instance();
-
-      for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
-        input::getEntry(entryDescriptionTree, i);
-        if (idBuffer != entryDescriptionBuffer.id())
-	  throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.\n";
-        oldregistry.insertMapped(entryDescriptionBuffer);
-	Parentage parents;
-	parents.parents() = entryDescriptionBuffer.parents();
-        registry.insertMapped(parents);
-      }
+    for (Long64_t i = 0, numEntries = entryDescriptionTree->GetEntries(); i < numEntries; ++i) {
+      input::getEntry(entryDescriptionTree, i);
+      if (idBuffer != entryDescriptionBuffer.id())
+	throw edm::Exception(errors::EventCorruption) << "Corruption of EntryDescription tree detected.\n";
+      oldregistry.insertMapped(entryDescriptionBuffer);
+      Parentage parents;
+      parents.parents() = entryDescriptionBuffer.parents();
+      registry.insertMapped(parents);
     }
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionIDBranchName().c_str(), 0);
     entryDescriptionTree->SetBranchAddress(poolNames::entryDescriptionBranchName().c_str(), 0);
@@ -845,10 +834,9 @@ namespace edm {
     fillHistory();
     overrideRunNumber(eventAux_.id_, eventAux_.isRealData());
 
-    boost::shared_ptr<BranchMapper> mapper =
-       fileFormatVersion().value_ < 11 && fileFormatVersion().value_ >= 8 ?
-       makeBranchMapper<EventEntryInfo>(eventTree_, InEvent) :
-       makeBranchMapper<ProductProvenance>(eventTree_, InEvent);
+    boost::shared_ptr<BranchMapper> mapper = (fileFormatVersion().value_ >= 11 ?
+        makeBranchMapper<ProductProvenance>(eventTree_, InEvent) :
+        makeBranchMapper<EventEntryInfo>(eventTree_, InEvent));
 
     // We're not done ... so prepare the EventPrincipal
     std::auto_ptr<EventPrincipal> thisEvent(new EventPrincipal(
