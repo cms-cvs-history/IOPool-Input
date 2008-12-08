@@ -32,6 +32,7 @@
 #include "FWCore/Utilities/interface/FriendlyName.h"
 
 //used for backward compatibility
+#include "DataFormats/Provenance/interface/BranchEntryDescription.h"
 #include "DataFormats/Provenance/interface/EntryDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/EventAux.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockAux.h"
@@ -1115,4 +1116,79 @@ namespace edm {
       }
     }
   }
+
+  // backward compatibility
+  boost::shared_ptr<BranchMapper>
+  RootFile:: makeBranchMapperInOldRelease(RootTree & rootTree, BranchType const& type) const {
+    if (fileFormatVersion_.value_ >= 7) {
+      rootTree.fillStatus();
+    } else { 
+       LogWarning("RootFile")
+         << "Backward compatibility not fully supported for reading files"
+	 << " written in CMSSW_1_8_4 or prior releases in releaseCMSSW_3_0_0.\n";
+    }
+    if (type == InEvent) {
+      boost::shared_ptr<BranchMapperWithReader<EventEntryInfo> > mapper(new BranchMapperWithReader<EventEntryInfo>(0, 0));
+      mapper->setDelayedRead(false);
+      for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
+          itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
+        if (type == it->second.branchType() && !it->second.transient()) {
+	  if (fileFormatVersion_.value_ >= 7) {
+	    input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
+	    input::BranchInfo const& ib = ix->second;
+	    TBranch *br = ib.provenanceBranch_;
+            std::auto_ptr<EntryDescriptionID> pb(new EntryDescriptionID);
+            EntryDescriptionID* ppb = pb.get();
+            br->SetAddress(&ppb);
+            input::getEntry(br, rootTree.entryNumber());
+	    std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
+	    EventEntryInfo entry(it->second.branchID(), rootTree.productStatuses()[index], it->second.oldProductID(), *pb);
+	    mapper->insert(entry.makeProductProvenance());
+          } else {
+	    TBranch *br = rootTree.branches().find(it->first)->second.provenanceBranch_;
+	    std::auto_ptr<BranchEntryDescription> pb(new BranchEntryDescription);
+	    BranchEntryDescription* ppb = pb.get();
+	    br->SetAddress(&ppb);
+	    input::getEntry(br, rootTree.entryNumber());
+	    std::auto_ptr<EntryDescription> entryDesc = pb->convertToEntryDescription();
+	    ProductStatus status = (ppb->creatorStatus() == BranchEntryDescription::Success ? productstatus::present() : productstatus::neverCreated());
+	    EventEntryInfo entry(it->second.branchID(), status, it->second.oldProductID());
+	    mapper->insert(entry.makeProductProvenance());
+	  }
+	  mapper->insertIntoMap(it->second.oldProductID(), it->second.branchID());
+        }
+      }
+      return mapper;
+    } else {
+      boost::shared_ptr<BranchMapperWithReader<ProductProvenance> > mapper(new BranchMapperWithReader<ProductProvenance>(0, 0));
+      mapper->setDelayedRead(false);
+      for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
+          itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
+	if (type == it->second.branchType() && !it->second.transient()) {
+	  if (fileFormatVersion_.value_ >= 7) {
+	    input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
+	    input::BranchInfo const& ib = ix->second;
+	    TBranch *br = ib.provenanceBranch_;
+            input::getEntry(br, rootTree.entryNumber());
+	    std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
+	    ProductProvenance entry(it->second.branchID(), rootTree.productStatuses()[index]);
+	    mapper->insert(entry);
+	  } else {
+	    TBranch *br = rootTree.branches().find(it->first)->second.provenanceBranch_;
+	    std::auto_ptr<BranchEntryDescription> pb(new BranchEntryDescription);
+	    BranchEntryDescription* ppb = pb.get();
+	    br->SetAddress(&ppb);
+	    input::getEntry(br, rootTree.entryNumber());
+	    std::auto_ptr<EntryDescription> entryDesc = pb->convertToEntryDescription();
+	    ProductStatus status = (ppb->creatorStatus() == BranchEntryDescription::Success ? productstatus::present() : productstatus::neverCreated());
+	    ProductProvenance entry(it->second.branchID(), status);
+	    mapper->insert(entry);
+	  }
+	}
+      }
+      return mapper;
+    }
+    return boost::shared_ptr<BranchMapper>();
+  }
+  // end backward compatibility
 }

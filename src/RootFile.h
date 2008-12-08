@@ -38,7 +38,6 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/Parentage.h"
 #include "DataFormats/Provenance/interface/ProductID.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
-#include "DataFormats/Provenance/interface/BranchEntryDescription.h" // backward compatibility
 #include "DataFormats/Provenance/interface/EventProcessHistoryID.h" // backward compatibility
 class TFile;
 
@@ -148,6 +147,8 @@ namespace edm {
     template <typename T>
     boost::shared_ptr<BranchMapper> makeBranchMapper(RootTree & rootTree, BranchType const& type) const;
 
+    boost::shared_ptr<BranchMapper> makeBranchMapperInOldRelease(RootTree & rootTree, BranchType const& type) const;
+
     std::string const file_;
     std::string const logicalFile_;
     std::string const catalog_;
@@ -193,75 +194,14 @@ namespace edm {
   }; // class RootFile
 
   template <typename T>
+  inline
   boost::shared_ptr<BranchMapper>
   RootFile::makeBranchMapper(RootTree & rootTree, BranchType const& type) const {
-    if (fileFormatVersion_.value_ >= 8) {
-      boost::shared_ptr<BranchMapper> bm = rootTree.makeBranchMapper<T>();
-      return bm;
+    if (fileFormatVersion_.value_ < 8) {
+      return makeBranchMapperInOldRelease(rootTree, type);
     } 
-    // backward compatibility
-    if (fileFormatVersion_.value_ >= 7) {
-      rootTree.fillStatus();
-      if (type == InEvent) {
-	boost::shared_ptr<BranchMapperWithReader<EventEntryInfo> > mapper(new BranchMapperWithReader<EventEntryInfo>(0, 0));
-	mapper->setDelayedRead(false);
-        for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
-            itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
-	  if (type == it->second.branchType() && !it->second.transient()) {
-	    input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
-	    input::BranchInfo const& ib = ix->second;
-	    TBranch *br = ib.provenanceBranch_;
-            std::auto_ptr<EntryDescriptionID> pb(new EntryDescriptionID);
-            EntryDescriptionID* ppb = pb.get();
-            br->SetAddress(&ppb);
-            input::getEntry(br, rootTree.entryNumber());
-	    std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
-	    EventEntryInfo entry(it->second.branchID(), rootTree.productStatuses()[index], it->second.oldProductID(), *pb);
-	    mapper->insert(entry.makeProductProvenance());
-	    mapper->insertIntoMap(it->second.oldProductID(), it->second.branchID());
-          }
-        }
-        return mapper;
-      } else {
-	boost::shared_ptr<BranchMapperWithReader<ProductProvenance> > mapper(new BranchMapperWithReader<ProductProvenance>(0, 0));
-	mapper->setDelayedRead(false);
-        for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
-            itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
-	  if (type == it->second.branchType() && !it->second.transient()) {
-	    input::BranchMap::const_iterator ix = rootTree.branches().find(it->first);
-	    input::BranchInfo const& ib = ix->second;
-	    TBranch *br = ib.provenanceBranch_;
-            input::getEntry(br, rootTree.entryNumber());
-	    std::vector<ProductStatus>::size_type index = it->second.oldProductID().productIndex() - 1;
-	    ProductProvenance entry(it->second.branchID(), rootTree.productStatuses()[index]);
-	    mapper->insert(entry);
-	  }
-        }
-        return mapper;
-      }
-    }
-/*
-    else {
-      for(ProductRegistry::ProductList::const_iterator it = productRegistry_->productList().begin(),
-          itEnd = productRegistry_->productList().end(); it != itEnd; ++it) {
-        if (type == it->second.branchType() && !it->second.transient()) {
-	  TBranch *br = rootTree.branches().find(it->first)->second.provenanceBranch_;
-          std::auto_ptr<BranchEntryDescription> pb(new BranchEntryDescription);
-          BranchEntryDescription* ppb = pb.get();
-          br->SetAddress(&ppb);
-          input::getEntry(br, rootTree.entryNumber());
-          std::auto_ptr<EntryDescription> entryDesc = pb->convertToEntryDescription();
-	  ProductStatus status = (ppb->creatorStatus() == BranchEntryDescription::Success ? productstatus::present() : productstatus::neverCreated());
-	  // Throws parents away for now.
-	  ProductProvenance entry(it->second.branchID(), status);
-	  mapper->insert(entry);
-	  // QQQ it->second.oldProductID()
-       }
-      }
-    }
-*/
-    // end backward compatibility
-    return boost::shared_ptr<BranchMapper>();
+    boost::shared_ptr<BranchMapper> bm = rootTree.makeBranchMapper<T>();
+    return bm;
   }
 
 }
