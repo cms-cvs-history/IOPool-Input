@@ -104,7 +104,6 @@ namespace edm {
     int forcedRunOffset_;
     RunNumber_t setRun_;
     GroupSelectorRules groupSelectorRules_;
-    bool dropMetaData_;
     bool primarySequence_;
     bool randomAccess_;
     boost::shared_ptr<DuplicateChecker> duplicateChecker_;
