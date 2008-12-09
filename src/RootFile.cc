@@ -207,7 +207,9 @@ namespace edm {
     // Merge into the hashed registries.
     pset::Registry& psetRegistry = *pset::Registry::instance();
     for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
-      psetRegistry.insertMapped(ParameterSet(i->second.pset_));
+      ParameterSet pset(i->second.pset_);
+      pset.fillID();
+      psetRegistry.insertMapped(pset);
     } 
     ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
     ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
