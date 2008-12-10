@@ -206,7 +206,7 @@ namespace edm {
     pset::Registry& psetRegistry = *pset::Registry::instance();
     for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
       ParameterSet pset(i->second.pset_);
-      pset.fillID();
+      pset.setID(i->first);
       psetRegistry.insertMapped(pset);
     } 
     ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
