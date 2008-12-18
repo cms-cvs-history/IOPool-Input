@@ -146,8 +146,8 @@ namespace edm {
 		productRegistry_(productRegistry),
 		branchIDLists_(),
 		branchListIndexes_() {
-    fillProcessConfigurationMap(pHistMap, procConfigMap);
-    fillMapsInProductRegistry(procConfigMap, productRegistry);
+    // fillProcessConfigurationMap(pHistMap, procConfigMap);
+    // fillMapsInProductRegistry(procConfigMap, productRegistry);
     fillListsAndIndexes(productRegistry, pHistMap, branchIDLists_, branchListIndexes_);
   }
 
