@@ -19,6 +19,7 @@
 #include "DataFormats/Provenance/interface/ParameterSetBlob.h"
 #include "DataFormats/Provenance/interface/ParentageRegistry.h"
 #include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
+#include "DataFormats/Provenance/interface/ProcessConfigurationRegistry.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/Provenance/interface/RunID.h"
 #include "DataFormats/Common/interface/RefCoreStreamer.h"
@@ -161,6 +162,12 @@ namespace edm {
     ProcessHistoryRegistry::collection_type *pHistMapPtr = &pHistMap;
     metaDataTree->SetBranchAddress(poolNames::processHistoryMapBranchName().c_str(), &pHistMapPtr);
 
+    ProcessConfigurationRegistry::collection_type pProcConfigMap;
+    if (metaDataTree->FindBranch(poolNames::processConfigurationBranchName().c_str()) != 0) {
+      ProcessConfigurationRegistry::collection_type *pProcConfigMapPtr = &pProcConfigMap;
+      metaDataTree->SetBranchAddress(poolNames::processConfigurationBranchName().c_str(), &pProcConfigMapPtr);
+    }
+
     std::auto_ptr<BranchIDListRegistry::collection_type> branchIDListsAPtr(new BranchIDListRegistry::collection_type);
     BranchIDListRegistry::collection_type *branchIDListsPtr = branchIDListsAPtr.get();
     if (metaDataTree->FindBranch(poolNames::branchIDListBranchName().c_str()) != 0) {
@@ -188,9 +195,17 @@ namespace edm {
 
     setRefCoreStreamer(true);  // backward compatibility
 
+    // Merge into the parameter set registry.
+    pset::Registry& psetRegistry = *pset::Registry::instance();
+    for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
+      ParameterSet pset(i->second.pset_);
+      pset.setID(i->first);
+      psetRegistry.insertMapped(pset);
+    } 
+
     if (fileFormatVersion_.value_ < 11) {
       // Old format input file.  Create a provenance adaptor.
-      provenanceAdaptor_.reset(new ProvenanceAdaptor(tempReg, pHistMap, psetMap, mdMap));
+      provenanceAdaptor_.reset(new ProvenanceAdaptor(tempReg, pHistMap, pProcConfigMap));
       // Fill in the branchIDLists branch from the provenance adaptor
       branchIDLists_ = provenanceAdaptor_->branchIDLists();
     } else {
@@ -202,13 +217,8 @@ namespace edm {
       branchIDLists_.reset(branchIDListsAPtr.release());
     }
 
-    // Merge into the hashed registries.
-    pset::Registry& psetRegistry = *pset::Registry::instance();
-    for (PsetMap::const_iterator i = psetMap.begin(), iEnd = psetMap.end(); i != iEnd; ++i) {
-      ParameterSet pset(i->second.pset_);
-      pset.setID(i->first);
-      psetRegistry.insertMapped(pset);
-    } 
+    // Merge into the remaining hashed registries.
+    ProcessConfigurationRegistry::instance()->insertCollection(pProcConfigMap);
     ProcessHistoryRegistry::instance()->insertCollection(pHistMap);
     ModuleDescriptionRegistry::instance()->insertCollection(mdMap);
 

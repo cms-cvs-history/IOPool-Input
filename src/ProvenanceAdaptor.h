@@ -13,10 +13,11 @@ ProvenanceAdaptor.h
 #include "boost/shared_ptr.hpp"
 #include "boost/utility.hpp"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
-#include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
-#include "DataFormats/Provenance/interface/ModuleDescriptionRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetID.h"
+#include "DataFormats/Provenance/interface/ProcessConfigurationRegistry.h"
+#include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetBlob.h"
+#include "DataFormats/Provenance/interface/ProvenanceFwd.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 
 namespace edm {
@@ -28,10 +29,9 @@ namespace edm {
   class ProvenanceAdaptor : private boost::noncopyable {
   public:
   ProvenanceAdaptor(
-	     ProductRegistry const& productRegistry,
+	     ProductRegistry& productRegistry,
 	     ProcessHistoryMap const& pHistMap,
-	     ParameterSetMap const& psetMap,
-	     ModuleDescriptionMap const&  mdMap);
+	     ProcessConfigurationMap& procConfigMap);
 
   
   boost::shared_ptr<BranchIDLists const> branchIDLists() const;
