@@ -355,9 +355,12 @@ namespace edm {
     if (fileIter_ != fileIterBegin_) {
       closeFile_();
       fileIter_ = fileIterBegin_;
+    }
+    if (!rootFile_) {
       initFile(false);
     }
     rewindFile();
+    firstFile_ = true; 
   }
 
   // Rewind to the beginning of the current file
