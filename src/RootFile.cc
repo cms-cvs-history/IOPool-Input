@@ -16,7 +16,6 @@
 #include "FWCore/Framework/interface/RunPrincipal.h"
 #include "FWCore/ParameterSet/interface/FillProductRegistryTransients.h"
 #include "DataFormats/Provenance/interface/BranchChildren.h"
-#include "DataFormats/Provenance/interface/MinimalEventID.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/ParameterSetBlob.h"
 #include "DataFormats/Provenance/interface/ParentageRegistry.h"
@@ -73,7 +72,6 @@ namespace edm {
     }
     bool operator()(EventRange const& eventRange) const {
       return contains(eventRange, event_);
-
     }
 
   private:
@@ -83,7 +81,7 @@ namespace edm {
     std::vector<EventRange> const& whichEventsToSkip_;
     std::vector<EventRange> const& whichEventsToProcess_;
     mutable LuminosityBlockID lumi_;
-    mutable MinimalEventID event_;
+    mutable EventID event_;
   };
 
   bool
@@ -116,7 +114,7 @@ namespace edm {
     if(e.event_ == 0U) {
       return false;
     }
-    event_ = MinimalEventID(e.run_, e.event_);
+    event_ = EventID(e.run_, e.event_);
     if(search_if_in_all(whichEventsToSkip_, *this)) {
       return true;
     }
@@ -582,7 +580,9 @@ namespace edm {
     assert (fileIndexIter_->getEntryType() == FileIndex::kEvent);
     return duplicateChecker_.get() != 0 &&
       duplicateChecker_->isDuplicateAndCheckActive(
-	EventID(fileIndexIter_->run_, fileIndexIter_->lumi_, fileIndexIter_->event_), file_);
+	EventID(fileIndexIter_->run_, fileIndexIter_->event_),
+	fileIndexIter_->lumi_,
+	file_);
   }
 
   FileIndex::EntryType
@@ -719,6 +719,11 @@ namespace edm {
       EventAux *pEvAux = &eventAux;
       eventTree_.fillAux<EventAux>(pEvAux);
       conversion(eventAux, eventAux_);
+    }
+    if(eventAux().luminosityBlock_ == 0 && !fileFormatVersion().runsAndLumis()) {
+      eventAux_.luminosityBlock_ = LuminosityBlockNumber_t(1);
+    } else if(!fileFormatVersion().lumiNumbers()) {
+      eventAux_.luminosityBlock_ = LuminosityBlockNumber_t(1);
     }
   }
 
@@ -865,10 +870,6 @@ namespace edm {
       return 0;
     }
     fillEventAuxiliary();
-    if(!fileFormatVersion().lumiInEventID()) {
-	//ugly, but will disappear when the backward compatibility is done with schema evolution.
-	const_cast<EventID&>(eventAux_.id()).setLuminosityBlockNumber(fileIndexIter_->lumi_);
-    }
     fillHistory();
     overrideRunNumber(eventAux_.id_, eventAux().isRealData());
 
@@ -1057,11 +1058,9 @@ namespace edm {
         throw edm::Exception(errors::Configuration,"RootFile::RootFile()")
           << "The 'setRunNumber' parameter of PoolSource cannot be used with real data.\n";
       }
-      id = EventID(id.run() + forcedRunOffset_, id.luminosityBlock(), id.event());
+      id = EventID(id.run() + forcedRunOffset_, id.event());
     } 
-    if(RunID(id.run()) < RunID::firstValidRun()) {
-      id = EventID(RunID::firstValidRun().run(), LuminosityBlockID::firstValidLuminosityBlock().luminosityBlock(),id.event());
-    }
+    if(RunID(id.run()) < RunID::firstValidRun()) id = EventID(RunID::firstValidRun().run(), id.event());
   }
 
   
