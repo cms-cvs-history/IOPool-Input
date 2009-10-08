@@ -45,6 +45,7 @@ namespace edm {
     bool fastCloningOK() const;
 
     bool isDuplicateAndCheckActive(EventID const& eventID,
+                                   LuminosityBlockNumber_t const& lumi,
                                    std::string const& fileName);
 
   private:

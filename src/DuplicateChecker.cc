@@ -96,6 +96,7 @@ namespace {
   }
 
   bool DuplicateChecker::isDuplicateAndCheckActive(EventID const& eventID,
+                                                   LuminosityBlockNumber_t const& lumi,
                                                    std::string const& fileName)
   {
     if (itIsKnownTheFileHasNoDuplicates_) return false;
@@ -105,7 +106,7 @@ namespace {
       if(dataType_ == isSimulation) return false;
     }
 
-    FileIndex::Element newEvent(eventID.run(), eventID.luminosityBlock(), eventID.event());
+    FileIndex::Element newEvent(eventID.run(), lumi, eventID.event());
     bool duplicate = !relevantPreviousEvents_.insert(newEvent).second;
 
     if (duplicate) {
@@ -113,7 +114,7 @@ namespace {
         LogWarning("DuplicateEvent")
           << "Duplicate Events found in entire set of input files.\n"
           << "Both events were from run " << eventID.run() 
-          << " and luminosity block " << eventID.luminosityBlock() 
+          << " and luminosity block " << lumi 
           << " with event number " << eventID.event() << ".\n"
           << "The duplicate was from file " << fileName << ".\n"
           << "The duplicate will be skipped.\n";
@@ -122,7 +123,7 @@ namespace {
         LogWarning("DuplicateEvent")
           << "Duplicate Events found in file " << fileName << ".\n"
           << "Both events were from run " << eventID.run() 
-          << " and luminosity block " << eventID.luminosityBlock()
+          << " and luminosity block " << lumi 
           << " with event number " << eventID.event() << ".\n"
           << "The duplicate will be skipped.\n";
       }
