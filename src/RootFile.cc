@@ -98,7 +98,7 @@ namespace edm {
       if(e.lumi_ != 0U && e.lumi_ < firstElement_.lumi_) {
         return true;
       }
-      if(e.lumi_ == firstElement_.lumi_) {
+      if(firstElement_.lumi_ == 0U || e.lumi_ == firstElement_.lumi_) {
         if(e.event_ != 0U && e.event_ < firstElement_.event_) {
           return true;
         }

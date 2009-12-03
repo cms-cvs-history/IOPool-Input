@@ -48,7 +48,7 @@ namespace edm {
     fileIndexes_(fileCatalogItems().size()),
     eventsRemainingInFile_(0),
     startAtRun_(pset.getUntrackedParameter<unsigned int>("firstRun", 1U)),
-    startAtLumi_(pset.getUntrackedParameter<unsigned int>("firstLuminosityBlock", 1U)),
+    startAtLumi_(pset.getUntrackedParameter<unsigned int>("firstLuminosityBlock", 0U)),
     startAtEvent_(pset.getUntrackedParameter<unsigned int>("firstEvent", 1U)),
     currentRun_(0U),
     currentLumi_(0U),
