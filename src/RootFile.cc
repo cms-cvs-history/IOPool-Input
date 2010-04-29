@@ -866,6 +866,29 @@ namespace edm {
       runAuxiliary->setBeginTime(eventAux().time()); 
       runAuxiliary->setEndTime(Timestamp::invalidTimestamp());
     }
+    if(!fileFormatVersion().processHistorySameWithinRun()) {
+      // RunAuxiliary may not contain a full process history.
+      // Merge in the process history of the first event in the run.
+      if(eventTree_.next()) {
+        fillEventAuxiliary();
+	if(eventAux().run() == runAuxiliary->run()) {
+          fillHistory();
+          ProcessHistory phRun;
+          ProcessHistoryRegistry::instance()->getMapped(runAuxiliary->processHistoryID(), phRun);
+          ProcessHistory phEvent;
+          bool found2 = ProcessHistoryRegistry::instance()->getMapped(history_->processHistoryID(), phEvent);
+	  if (found2) {
+	    bool merged = phRun.mergeProcessHistory(phEvent);
+            if (merged) {
+              ProcessHistoryRegistry::instance()->insertMapped(phRun);
+	      runAuxiliary->setProcessHistoryID(phRun.id());
+	    }
+	  }
+        }
+        // back up, so event will not be skipped.
+        eventTree_.previous();
+      }
+    }
     return runAuxiliary;
   }
 
