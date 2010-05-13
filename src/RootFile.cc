@@ -173,7 +173,26 @@ namespace edm {
     typedef std::map<ParameterSetID, ParameterSetBlob> PsetMap;
     PsetMap psetMap;
     PsetMap *psetMapPtr = &psetMap;
-    metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
+    if(metaDataTree->FindBranch(poolNames::parameterSetMapBranchName().c_str()) != 0) {
+      //backward compatibility
+      assert(!fileFormatVersion().parameterSetsTree());
+      metaDataTree->SetBranchAddress(poolNames::parameterSetMapBranchName().c_str(), &psetMapPtr);
+    } else {
+      assert(fileFormatVersion().parameterSetsTree());
+      TTree* psetTree = dynamic_cast<TTree *>(filePtr_->Get(poolNames::parameterSetsTreeName().c_str()));
+      if(0 == psetTree) {
+        throw Exception(errors::FileReadError) << "Could not find tree " << poolNames::parameterSetsTreeName()
+        << " in the input file.\n";
+      }
+      typedef std::pair<ParameterSetID, ParameterSetBlob> IdToBlobs;
+      IdToBlobs idToBlob;
+      IdToBlobs* pIdToBlob = &idToBlob;
+      psetTree->SetBranchAddress(poolNames::idToParameterSetBlobsBranchName().c_str(), &pIdToBlob);
+      for(Long64_t i = 0; i != psetTree->GetEntries(); ++i) {
+        psetTree->GetEntry(i);
+        psetMap.insert(idToBlob);
+      }
+    }
 
     // backward compatibility
     ProcessHistoryRegistry::collection_type pHistMap;
@@ -764,6 +783,9 @@ namespace edm {
     while(fileIndexIter_ != fileIndexEnd_ && fileIndexIter_->getEntryType() != FileIndex::kEvent) {
       ++fileIndexIter_;
     }
+
+    eventTree_.resetTraining();
+
     return (fileIndexIter_ == fileIndexEnd_);
   }
 
@@ -836,7 +858,7 @@ namespace edm {
   RootFile::readRunAuxiliary_() {
     assert(fileIndexIter_ != fileIndexEnd_);
     assert(fileIndexIter_->getEntryType() == FileIndex::kRun);
-    // Begin code for backward compatibility before the exixtence of run trees.
+    // Begin code for backward compatibility before the existence of run trees.
     if(!runTree_.isValid()) {
       // prior to the support of run trees.
       // RunAuxiliary did not contain a valid timestamp.  Take it from the next event.
@@ -849,7 +871,7 @@ namespace edm {
       overrideRunNumber(run);
       return boost::shared_ptr<RunAuxiliary>(new RunAuxiliary(run.run(), eventAux().time(), Timestamp::invalidTimestamp()));
     }
-    // End code for backward compatibility before the exixtence of run trees.
+    // End code for backward compatibility before the existence of run trees.
     runTree_.setEntryNumber(fileIndexIter_->entry_); 
     boost::shared_ptr<RunAuxiliary> runAuxiliary = fillRunAuxiliary();
     assert(runAuxiliary->run() == fileIndexIter_->run_);
@@ -896,12 +918,12 @@ namespace edm {
   RootFile::readRun_(boost::shared_ptr<RunPrincipal> rpCache) {
     assert(fileIndexIter_ != fileIndexEnd_);
     assert(fileIndexIter_->getEntryType() == FileIndex::kRun);
-    // Begin code for backward compatibility before the exixtence of run trees.
+    // Begin code for backward compatibility before the existence of run trees.
     if(!runTree_.isValid()) {
       ++fileIndexIter_;
       return rpCache;
     }
-    // End code for backward compatibility before the exixtence of run trees.
+    // End code for backward compatibility before the existence of run trees.
     rpCache->fillRunPrincipal(makeBranchMapper(runTree_, InRun), runTree_.makeDelayedReader(fileFormatVersion()));
     // Read in all the products now.
     rpCache->readImmediate();
@@ -913,7 +935,7 @@ namespace edm {
   RootFile::readLuminosityBlockAuxiliary_() {
     assert(fileIndexIter_ != fileIndexEnd_);
     assert(fileIndexIter_->getEntryType() == FileIndex::kLumi);
-    // Begin code for backward compatibility before the exixtence of lumi trees.
+    // Begin code for backward compatibility before the existence of lumi trees.
     if(!lumiTree_.isValid()) {
       if(eventTree_.next()) {
         fillEventAuxiliary();
@@ -925,7 +947,7 @@ namespace edm {
       overrideRunNumber(lumi);
       return boost::shared_ptr<LuminosityBlockAuxiliary>(new LuminosityBlockAuxiliary(lumi.run(), lumi.luminosityBlock(), eventAux().time(), Timestamp::invalidTimestamp()));
     }
-    // End code for backward compatibility before the exixtence of lumi trees.
+    // End code for backward compatibility before the existence of lumi trees.
     lumiTree_.setEntryNumber(fileIndexIter_->entry_); 
     boost::shared_ptr<LuminosityBlockAuxiliary> lumiAuxiliary = fillLumiAuxiliary();
     assert(lumiAuxiliary->run() == fileIndexIter_->run_);
@@ -951,12 +973,12 @@ namespace edm {
   RootFile::readLumi(boost::shared_ptr<LuminosityBlockPrincipal> lbCache) {
     assert(fileIndexIter_ != fileIndexEnd_);
     assert(fileIndexIter_->getEntryType() == FileIndex::kLumi);
-    // Begin code for backward compatibility before the exixtence of lumi trees.
+    // Begin code for backward compatibility before the existence of lumi trees.
     if(!lumiTree_.isValid()) {
       ++fileIndexIter_;
       return lbCache;
     }
-    // End code for backward compatibility before the exixtence of lumi trees.
+    // End code for backward compatibility before the existence of lumi trees.
     lumiTree_.setEntryNumber(fileIndexIter_->entry_); 
     lbCache->fillLuminosityBlockPrincipal(makeBranchMapper(lumiTree_, InLumi),
 					 lumiTree_.makeDelayedReader(fileFormatVersion()));
