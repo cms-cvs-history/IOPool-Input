@@ -735,7 +735,7 @@ namespace edm {
       conversion(lumiAux, *lumiAuxiliary);
     }
     if(provenanceAdaptor_) {
-      lumiAuxiliary->processHistoryID() = provenanceAdaptor_->convertID(lumiAuxiliary->processHistoryID());
+      lumiAuxiliary->setProcessHistoryID(provenanceAdaptor_->convertID(lumiAuxiliary->processHistoryID()));
     }
     if(lumiAuxiliary->luminosityBlock() == 0 && !fileFormatVersion().runsAndLumis()) {
       lumiAuxiliary->id() = LuminosityBlockID(RunNumber_t(1), LuminosityBlockNumber_t(1));
@@ -756,7 +756,7 @@ namespace edm {
       conversion(runAux, *runAuxiliary);
     }
     if(provenanceAdaptor_) {
-      runAuxiliary->processHistoryID() = provenanceAdaptor_->convertID(runAuxiliary->processHistoryID());
+      runAuxiliary->setProcessHistoryID(provenanceAdaptor_->convertID(runAuxiliary->processHistoryID()));
     }
     return runAuxiliary;
   }
