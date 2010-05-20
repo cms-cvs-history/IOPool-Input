@@ -169,6 +169,11 @@ namespace edm {
       metaDataTree->SetBranchAddress(poolNames::fileIndexBranchName().c_str(), &findexPtr);
     }
 
+    IndexIntoFile *iifPtr = &indexIntoFile_;
+    if(metaDataTree->FindBranch(poolNames::indexIntoFileBranchName().c_str()) != 0) {
+      metaDataTree->SetBranchAddress(poolNames::indexIntoFileBranchName().c_str(), &iifPtr);
+    }
+
     // Need to read to a temporary registry so we can do a translation of the BranchKeys.
     // This preserves backward compatibility against friendly class name algorithm changes.
     ProductRegistry inputProdDescReg;
