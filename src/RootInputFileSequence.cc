@@ -48,6 +48,8 @@ namespace edm {
     branchesMustMatch_(BranchDescription::Permissive),
     flatDistribution_(),
     fileIndexes_(fileCatalogItems().size()),
+    indexesIntoFiles_(fileCatalogItems().size()),
+    orderProcessHistoryIDs_(),
     eventSkipperByID_(primarySequence ? EventSkipperByID::create(pset).release() : 0),
     eventsRemainingInFile_(0),
     currentRun_(0U),
@@ -183,8 +185,10 @@ namespace edm {
 	  setRun_,
 	  noEventSort_,
 	  groupSelectorRules_, !primarySequence_, duplicateChecker_, dropDescendants_,
-          fileIndexes_, currentFileIndex));
+	  fileIndexes_, currentFileIndex, orderProcessHistoryIDs_));
+
           fileIndexes_[currentFileIndex] = rootFile_->fileIndexSharedPtr();
+          indexesIntoFiles_[currentFileIndex] = rootFile_->indexIntoFileSharedPtr();
       rootFile_->reportOpened(primary() ?
 	 (primarySequence_ ? "primaryFiles" : "secondaryFiles") : "mixingFiles");
       if (primarySequence_) {

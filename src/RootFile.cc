@@ -24,6 +24,7 @@
 #include "DataFormats/Provenance/interface/ProcessConfigurationRegistry.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/Provenance/interface/RunID.h"
+#include "DataFormats/Provenance/interface/IndexIntoFile.h"
 #include "DataFormats/Common/interface/RefCoreStreamer.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -90,7 +91,8 @@ namespace edm {
                      boost::shared_ptr<DuplicateChecker> duplicateChecker,
                      bool dropDescendants,
                      std::vector<boost::shared_ptr<FileIndex> > const& fileIndexes,
-                     std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex) :
+                     std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex,
+                     std::vector<ProcessHistoryID> & orderProcessHistoryIDs) :
       file_(fileName),
       logicalFile_(logicalFileName),
       catalog_(catalogName),
@@ -99,7 +101,10 @@ namespace edm {
       fileFormatVersion_(),
       fid_(),
       fileIndexSharedPtr_(new FileIndex),
+      indexIntoFileSharedPtr_(new IndexIntoFile),
       fileIndex_(*fileIndexSharedPtr_),
+      indexIntoFile_(*indexIntoFileSharedPtr_),
+      orderProcessHistoryIDs_(orderProcessHistoryIDs),
       fileIndexBegin_(fileIndex_.begin()),
       fileIndexEnd_(fileIndexBegin_),
       fileIndexIter_(fileIndexBegin_),
@@ -622,6 +627,72 @@ namespace edm {
   }
 
   void
+  RootFile::fillIndexIntoFile() {
+
+    // Loop over run entries and fill the index from the run auxiliary
+    // branch.  We do runs first because there can be runs with no events
+    // and the order ProcessHistoryIDs are first encountered matters.  We
+    // want to preserve the order in the input, not put the ProcessHistoryIDs
+    // associated with runs with no events last.
+    if (runTree_.isValid()) {
+      while(runTree_.next()) {
+        boost::shared_ptr<RunAuxiliary> runAuxiliary = fillRunAuxiliary();
+        indexIntoFile_.addEntry(runAuxiliary->processHistoryID(),
+                            runAuxiliary->run(), 0U, 0U, runTree_.entryNumber());
+      }
+      runTree_.setEntryNumber(-1);
+    }
+
+    // Loop over luminosity block entries and fill the index from the lumi auxiliary branch
+    if(lumiTree_.isValid()) {
+      while(lumiTree_.next()) {
+        boost::shared_ptr<LuminosityBlockAuxiliary> lumiAux = fillLumiAuxiliary();
+        indexIntoFile_.addEntry(lumiAux->processHistoryID(),
+                            lumiAux->run(), lumiAux->luminosityBlock(), 0U, lumiTree_.entryNumber());
+      }
+      lumiTree_.setEntryNumber(-1);
+    }
+
+    // Loop over event entries and fill the index from the event auxiliary branch
+    while(eventTree_.next()) {
+      fillEventAuxiliary();
+      indexIntoFile_.addEntry(history_->processHistoryID(),
+                              eventAux().run(),
+                              eventAux().luminosityBlock(),
+                              eventAux().event(),
+                              eventTree_.entryNumber());
+
+      LuminosityBlockNumber_t lastLumi = 0;
+      RunNumber_t lastRun = 0;
+
+      // If the lumi tree is invalid, use the event tree to add lumi index entries.
+      if(!lumiTree_.isValid()) {
+	if(lastLumi != eventAux().luminosityBlock()) {
+	  lastLumi = eventAux().luminosityBlock();
+          indexIntoFile_.addEntry(history_->processHistoryID(),
+                              eventAux().run(), eventAux().luminosityBlock(), 0U, FileIndex::Element::invalidEntry);
+	}
+      }
+      // If the run tree is invalid, use the event tree to add run index entries.
+      if(!runTree_.isValid()) {
+	if(lastRun != eventAux().run()) {
+	  lastRun = eventAux().run();
+          indexIntoFile_.addEntry(history_->processHistoryID(),
+                              eventAux().run(), 0U, 0U, FileIndex::Element::invalidEntry);
+        }
+      }
+    }
+    eventTree_.setEntryNumber(-1);
+
+    // We want the ProcessHistoryIDs in the order encountered in all the
+    // input files, not in the order encountered in this particular input
+    // file.
+    indexIntoFile_.fixIndexes(orderProcessHistoryIDs_);
+
+    indexIntoFile_.sortBy_Index_Run_Lumi_Event();
+  }
+
+  void
   RootFile::validateFile() {
     if(!fid_.isValid()) {
       fid_ = FileID(createGlobalIdentifier());
@@ -632,6 +703,9 @@ namespace edm {
     }
     if(fileIndex_.empty()) {
       fillFileIndex();
+    }
+    if (indexIntoFile_.empty()) {
+      fillIndexIntoFile();
     }
   }
 

@@ -50,6 +50,7 @@ namespace edm {
   class ProvenanceAdaptor;
   class GroupSelectorRules;
   class EventSkipperByID;
+  class IndexIntoFile;
 
   class RootFile : private boost::noncopyable {
   public:
@@ -73,7 +74,8 @@ namespace edm {
              boost::shared_ptr<DuplicateChecker> duplicateChecker,
              bool dropDescendantsOfDroppedProducts,
              std::vector<boost::shared_ptr<FileIndex> > const& fileIndexes,
-             std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex);
+             std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex,
+             std::vector<ProcessHistoryID> & orderProcessHistoryIDs);
     ~RootFile();
     void reportOpened(std::string const& inputType);
     void close(bool reallyClose);
@@ -130,12 +132,16 @@ namespace edm {
     boost::shared_ptr<FileIndex> fileIndexSharedPtr() const {
       return fileIndexSharedPtr_;
     }
+    boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr() const {
+      return indexIntoFileSharedPtr_;
+    }
 
   private:
     FileIndex::const_iterator fileIndexIter() const;
     void setIfFastClonable(int remainingEvents, int remainingLumis);
     void validateFile();
     void fillFileIndex();
+    void fillIndexIntoFile();
     void fillEventAuxiliary();
     void fillHistory();
     boost::shared_ptr<LuminosityBlockAuxiliary> fillLumiAuxiliary();
@@ -163,7 +169,10 @@ namespace edm {
     FileFormatVersion fileFormatVersion_;
     FileID fid_;
     boost::shared_ptr<FileIndex> fileIndexSharedPtr_;
+    boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr_;
     FileIndex & fileIndex_;
+    IndexIntoFile & indexIntoFile_;
+    std::vector<ProcessHistoryID> & orderProcessHistoryIDs_;
     FileIndex::const_iterator fileIndexBegin_;
     FileIndex::const_iterator fileIndexEnd_;
     FileIndex::const_iterator fileIndexIter_;

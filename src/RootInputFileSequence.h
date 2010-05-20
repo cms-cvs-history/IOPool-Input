@@ -22,6 +22,7 @@ RootInputFileSequence: This is an InputSource
 #include "DataFormats/Provenance/interface/FileIndex.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
 #include "DataFormats/Provenance/interface/RunID.h"
+#include "DataFormats/Provenance/interface/EventProcessHistoryID.h"
 
 #include "boost/shared_ptr.hpp"
 #include "boost/utility.hpp"
@@ -36,9 +37,9 @@ namespace edm {
   class RootFile;
   class FileCatalogItem;
   class InputFileCatalog;
-  class FileIndex;
   class DuplicateChecker;
   class ParameterSetDescription;
+  class IndexIntoFile;
 
   class RootInputFileSequence : private boost::noncopyable {
   public:
@@ -99,6 +100,8 @@ namespace edm {
 
     boost::scoped_ptr<CLHEP::RandFlat> flatDistribution_;
     std::vector<boost::shared_ptr<FileIndex> > fileIndexes_;
+    std::vector<boost::shared_ptr<IndexIntoFile> > indexesIntoFiles_;
+    std::vector<edm::ProcessHistoryID> orderProcessHistoryIDs_;
 
     boost::scoped_ptr<EventSkipperByID> eventSkipperByID_;
     int eventsRemainingInFile_;
