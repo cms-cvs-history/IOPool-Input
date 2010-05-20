@@ -22,7 +22,7 @@ RootInputFileSequence: This is an InputSource
 #include "DataFormats/Provenance/interface/FileIndex.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
 #include "DataFormats/Provenance/interface/RunID.h"
-#include "DataFormats/Provenance/interface/EventProcessHistoryID.h"
+#include "DataFormats/Provenance/interface/ProcessHistoryID.h"
 
 #include "boost/shared_ptr.hpp"
 #include "boost/utility.hpp"
@@ -101,7 +101,7 @@ namespace edm {
     boost::scoped_ptr<CLHEP::RandFlat> flatDistribution_;
     std::vector<boost::shared_ptr<FileIndex> > fileIndexes_;
     std::vector<boost::shared_ptr<IndexIntoFile> > indexesIntoFiles_;
-    std::vector<edm::ProcessHistoryID> orderProcessHistoryIDs_;
+    std::vector<ProcessHistoryID> orderedProcessHistoryIDs_;
 
     boost::scoped_ptr<EventSkipperByID> eventSkipperByID_;
     int eventsRemainingInFile_;

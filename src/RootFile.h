@@ -75,7 +75,7 @@ namespace edm {
              bool dropDescendantsOfDroppedProducts,
              std::vector<boost::shared_ptr<FileIndex> > const& fileIndexes,
              std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex,
-             std::vector<ProcessHistoryID> & orderProcessHistoryIDs);
+             std::vector<ProcessHistoryID> & orderedProcessHistoryIDs);
     ~RootFile();
     void reportOpened(std::string const& inputType);
     void close(bool reallyClose);
@@ -140,7 +140,6 @@ namespace edm {
     FileIndex::const_iterator fileIndexIter() const;
     void setIfFastClonable(int remainingEvents, int remainingLumis);
     void validateFile();
-    void fillFileIndex();
     void fillIndexIntoFile();
     void fillEventAuxiliary();
     void fillHistory();
@@ -172,7 +171,7 @@ namespace edm {
     boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr_;
     FileIndex & fileIndex_;
     IndexIntoFile & indexIntoFile_;
-    std::vector<ProcessHistoryID> & orderProcessHistoryIDs_;
+    std::vector<ProcessHistoryID> & orderedProcessHistoryIDs_;
     FileIndex::const_iterator fileIndexBegin_;
     FileIndex::const_iterator fileIndexEnd_;
     FileIndex::const_iterator fileIndexIter_;

@@ -92,7 +92,7 @@ namespace edm {
                      bool dropDescendants,
                      std::vector<boost::shared_ptr<FileIndex> > const& fileIndexes,
                      std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex,
-                     std::vector<ProcessHistoryID> & orderProcessHistoryIDs) :
+                     std::vector<ProcessHistoryID> & orderedProcessHistoryIDs) :
       file_(fileName),
       logicalFile_(logicalFileName),
       catalog_(catalogName),
@@ -104,7 +104,7 @@ namespace edm {
       indexIntoFileSharedPtr_(new IndexIntoFile),
       fileIndex_(*fileIndexSharedPtr_),
       indexIntoFile_(*indexIntoFileSharedPtr_),
-      orderProcessHistoryIDs_(orderProcessHistoryIDs),
+      orderedProcessHistoryIDs_(orderedProcessHistoryIDs),
       fileIndexBegin_(fileIndex_.begin()),
       fileIndexEnd_(fileIndexBegin_),
       fileIndexIter_(fileIndexBegin_),
@@ -577,58 +577,10 @@ namespace edm {
   }
 
   void
-  RootFile::fillFileIndex() {
-    // This function is for backward compatibility only.
-    // Newer files store the file index.
-    LuminosityBlockNumber_t lastLumi = 0;
-    RunNumber_t lastRun = 0;
-
-    // Loop over event entries and fill the index from the event auxiliary branch
-    while(eventTree_.next()) {
-      fillEventAuxiliary();
-      fileIndex_.addEntry(eventAux().run(),
-			  eventAux().luminosityBlock(),
-			  eventAux().event(),
-			  eventTree_.entryNumber());
-      // If the lumi tree is invalid, use the event tree to add lumi index entries.
-      if(!lumiTree_.isValid()) {
-	if(lastLumi != eventAux().luminosityBlock()) {
-	  lastLumi = eventAux().luminosityBlock();
-          fileIndex_.addEntry(eventAux().run(), eventAux().luminosityBlock(), 0U, FileIndex::Element::invalidEntry);
-	}
-      }
-      // If the run tree is invalid, use the event tree to add run index entries.
-      if(!runTree_.isValid()) {
-	if(lastRun != eventAux().run()) {
-	  lastRun = eventAux().run();
-          fileIndex_.addEntry(eventAux().run(), 0U, 0U, FileIndex::Element::invalidEntry);
-        }
-      }
-    }
-    eventTree_.setEntryNumber(-1);
-
-    // Loop over luminosity block entries and fill the index from the lumi auxiliary branch
-    if(lumiTree_.isValid()) {
-      while(lumiTree_.next()) {
-        boost::shared_ptr<LuminosityBlockAuxiliary> lumiAux = fillLumiAuxiliary();
-        fileIndex_.addEntry(lumiAux->run(), lumiAux->luminosityBlock(), 0U, lumiTree_.entryNumber());
-      }
-      lumiTree_.setEntryNumber(-1);
-    }
-
-    // Loop over run entries and fill the index from the run auxiliary branch
-    if(runTree_.isValid()) {
-      while(runTree_.next()) {
-        fileIndex_.addEntry(fillRunAuxiliary()->run(), 0U, 0U, runTree_.entryNumber());
-      }
-      runTree_.setEntryNumber(-1);
-    }
-    fileIndex_.sortBy_Run_Lumi_Event();
-  }
-
-  void
   RootFile::fillIndexIntoFile() {
-
+    // This function is for backward compatibility only.
+    // If reading a current format file, indexIntoFile_ is read from the input file.
+    //
     // Loop over run entries and fill the index from the run auxiliary
     // branch.  We do runs first because there can be runs with no events
     // and the order ProcessHistoryIDs are first encountered matters.  We
@@ -687,7 +639,7 @@ namespace edm {
     // We want the ProcessHistoryIDs in the order encountered in all the
     // input files, not in the order encountered in this particular input
     // file.
-    indexIntoFile_.fixIndexes(orderProcessHistoryIDs_);
+    indexIntoFile_.fixIndexes(orderedProcessHistoryIDs_);
 
     indexIntoFile_.sortBy_Index_Run_Lumi_Event();
   }
@@ -700,9 +652,6 @@ namespace edm {
     if(!eventTree_.isValid()) {
       throw edm::Exception(errors::EventCorruption) <<
 	 "'Events' tree is corrupted or not present\n" << "in the input file.\n";
-    }
-    if(fileIndex_.empty()) {
-      fillFileIndex();
     }
     if (indexIntoFile_.empty()) {
       fillIndexIntoFile();
