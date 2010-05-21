@@ -19,10 +19,10 @@ RootInputFileSequence: This is an InputSource
 #include "FWCore/Sources/interface/VectorInputSource.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "DataFormats/Provenance/interface/EventID.h"
-#include "DataFormats/Provenance/interface/FileIndex.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
 #include "DataFormats/Provenance/interface/RunID.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
+#include "DataFormats/Provenance/interface/IndexIntoFile.h"
 
 #include "boost/shared_ptr.hpp"
 #include "boost/utility.hpp"
@@ -39,7 +39,6 @@ namespace edm {
   class InputFileCatalog;
   class DuplicateChecker;
   class ParameterSetDescription;
-  class IndexIntoFile;
 
   class RootInputFileSequence : private boost::noncopyable {
   public:
@@ -61,11 +60,10 @@ namespace edm {
     boost::shared_ptr<LuminosityBlockPrincipal> readIt(LuminosityBlockID const& id);
     boost::shared_ptr<RunPrincipal> readIt(RunID const& run);
     bool skipEvents(int offset, PrincipalCache& cache);
-    bool skipToItem(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event, bool exact, bool record);
+    bool skipToItem(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event, bool record);
     void rewind_();
     void reset(PrincipalCache& cache);
     void readMany(int number, EventPrincipalVector& result);
-    void readMany(int number, EventPrincipalVector& result, EventID const& id, unsigned int fileSeqNumber);
     void readManyRandom(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber);
     void readManySequential(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber);
     void readManySpecified(std::vector<EventID> const& events, EventPrincipalVector& result); 
@@ -99,7 +97,6 @@ namespace edm {
     BranchDescription::MatchMode branchesMustMatch_;
 
     boost::scoped_ptr<CLHEP::RandFlat> flatDistribution_;
-    std::vector<boost::shared_ptr<FileIndex> > fileIndexes_;
     std::vector<boost::shared_ptr<IndexIntoFile> > indexesIntoFiles_;
     std::vector<ProcessHistoryID> orderedProcessHistoryIDs_;
 
@@ -110,7 +107,7 @@ namespace edm {
     RunNumber_t skippedToRun_;
     LuminosityBlockNumber_t skippedToLumi_;
     EventNumber_t skippedToEvent_;
-    FileIndex::EntryNumber_t skippedToEntry_;
+    IndexIntoFile::EntryNumber_t skippedToEntry_;
     int numberOfEventsToSkip_;
     bool noEventSort_;
     bool skipBadFiles_;

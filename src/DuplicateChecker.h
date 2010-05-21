@@ -16,7 +16,7 @@ not at all.
 
 #include "DataFormats/Provenance/interface/EventID.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
-#include "DataFormats/Provenance/interface/FileIndex.h"
+#include "DataFormats/Provenance/interface/IndexIntoFile.h"
 
 #include "boost/shared_ptr.hpp"
 
@@ -37,15 +37,16 @@ namespace edm {
 
     void inputFileOpened(
       bool realData,
-      FileIndex const& fileIndex,
-      std::vector<boost::shared_ptr<FileIndex> > const& fileIndexes,
-      std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex);
+      IndexIntoFile const& indexIntoFile,
+      std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
+      std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentFileIndex);
 
     void inputFileClosed();
 
     bool fastCloningOK() const;
 
-    bool isDuplicateAndCheckActive(EventID const& eventID,
+    bool isDuplicateAndCheckActive(int index,
+                                   EventID const& eventID,
                                    std::string const& fileName);
 
     static void fillDescription(ParameterSetDescription & desc);
@@ -65,7 +66,7 @@ namespace edm {
     // the current file.  Plus it holds events that have been already
     // processed in the current file.  It is not used if there are
     // no duplicates or duplicate checking has been disabled.
-    std::set<FileIndex::Element> relevantPreviousEvents_;
+    std::set<IndexIntoFile::Element> relevantPreviousEvents_;
 
     bool itIsKnownTheFileHasNoDuplicates_;
   };

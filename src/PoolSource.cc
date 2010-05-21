@@ -135,7 +135,7 @@ namespace edm {
   PoolSource::readRun_(boost::shared_ptr<RunPrincipal> rpCache) {
     if (secondaryFileSequence_ && !branchIDsToReplace_[InRun].empty()) {
       boost::shared_ptr<RunPrincipal> primaryPrincipal = primaryFileSequence_->readRun_(rpCache);
-      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), 0U, 0U, true, false);
+      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), 0U, 0U, false);
       if (found) {
         boost::shared_ptr<RunAuxiliary> secondaryAuxiliary = secondaryFileSequence_->readRunAuxiliary_();
         checkConsistency(primaryPrincipal->aux(), *secondaryAuxiliary);
@@ -157,7 +157,7 @@ namespace edm {
   PoolSource::readLuminosityBlock_(boost::shared_ptr<LuminosityBlockPrincipal> lbCache) {
     if (secondaryFileSequence_ && !branchIDsToReplace_[InLumi].empty()) {
       boost::shared_ptr<LuminosityBlockPrincipal> primaryPrincipal = primaryFileSequence_->readLuminosityBlock_(lbCache);
-      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), primaryPrincipal->luminosityBlock(), 0U, true, false);
+      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), primaryPrincipal->luminosityBlock(), 0U, false);
       if (found) {
         boost::shared_ptr<LuminosityBlockAuxiliary> secondaryAuxiliary = secondaryFileSequence_->readLuminosityBlockAuxiliary_();
         checkConsistency(primaryPrincipal->aux(), *secondaryAuxiliary);
@@ -184,7 +184,7 @@ namespace edm {
       bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(),
 						      primaryPrincipal->luminosityBlock(),
 						      primaryPrincipal->id().event(),
-						      true, false);
+						      false);
       if (found) {
         EventPrincipal* secondaryPrincipal = secondaryFileSequence_->readEvent(*secondaryEventPrincipal_, luminosityBlockPrincipal());
         checkConsistency(*primaryPrincipal, *secondaryPrincipal);
@@ -203,7 +203,8 @@ namespace edm {
 
   EventPrincipal*
   PoolSource::readIt(EventID const& id) {
-    primaryFileSequence_->skipToItem(id.run(), id.luminosityBlock(), id.event(), false, true);
+    bool found = primaryFileSequence_->skipToItem(id.run(), id.luminosityBlock(), id.event(), true);
+    if (!found) return 0;
     return readEvent_();
   }
 
@@ -261,12 +262,6 @@ namespace edm {
   PoolSource::readMany_(int number, EventPrincipalVector& result) {
     assert (!secondaryFileSequence_);
     primaryFileSequence_->readMany(number, result);
-  }
-
-  void
-  PoolSource::readMany_(int number, EventPrincipalVector& result, EventID const& id, unsigned int fileSeqNumber) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readMany(number, result, id, fileSeqNumber);
   }
 
   void

@@ -13,11 +13,11 @@ namespace edm {
 
 namespace {
   struct IsDupAnEvent {
-    bool operator()(FileIndex::Element const& e) {
-      return e.event_ != 0U;
+    bool operator()(IndexIntoFile::Element const& e) {
+      return e.event() != 0U;
     }
-    bool operator()(FileIndex::Element const& first, FileIndex::Element const& next) {
-      return first == next && first.event_ != 0U;
+    bool operator()(IndexIntoFile::Element const& first, IndexIntoFile::Element const& next) {
+      return first == next && first.event() != 0U;
     }
   };
 }
@@ -50,9 +50,9 @@ namespace {
 
   void DuplicateChecker::inputFileOpened(
       bool realData,
-      FileIndex const& fileIndex,
-      std::vector<boost::shared_ptr<FileIndex> > const& fileIndexes,
-      std::vector<boost::shared_ptr<FileIndex> >::size_type currentFileIndex) {
+      IndexIntoFile const& indexIntoFile,
+      std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
+      std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentIndexIntoFile) {
 
     if (duplicateCheckMode_ == noDuplicateCheck) return;
 
@@ -66,14 +66,14 @@ namespace {
 
     if (duplicateCheckMode_ == checkAllFilesOpened) {
 
-      std::insert_iterator<std::set<FileIndex::Element> > insertIter(relevantPreviousEvents_, relevantPreviousEvents_.begin());
+      std::insert_iterator<std::set<IndexIntoFile::Element> > insertIter(relevantPreviousEvents_, relevantPreviousEvents_.begin());
 
-      // Compares the current FileIndex to all the previous ones and saves any duplicates.
+      // Compares the current IndexIntoFile to all the previous ones and saves any duplicates.
       // One unintended thing, it also saves the duplicate runs and lumis.
-      for(std::vector<boost::shared_ptr<FileIndex> >::size_type i = 0; i < currentFileIndex; ++i) {
-        if (fileIndexes[i].get() != 0) {
-          std::set_intersection(fileIndex.begin(), fileIndex.end(),
-                                fileIndexes[i]->begin(), fileIndexes[i]->end(),
+      for(std::vector<boost::shared_ptr<IndexIntoFile> >::size_type i = 0; i < currentIndexIntoFile; ++i) {
+        if (indexesIntoFiles[i].get() != 0) {
+          std::set_intersection(indexIntoFile.begin(), indexIntoFile.end(),
+                                indexesIntoFiles[i]->begin(), indexesIntoFiles[i]->end(),
                                 insertIter);
         }
       }
@@ -81,8 +81,8 @@ namespace {
     // Check if none of the duplicates are events.
     if (!search_if_in_all(relevantPreviousEvents_, IsDupAnEvent())) {
       // Check for event duplicates within the new file
-      FileIndex::const_iterator duplicate = std::adjacent_find(fileIndex.begin(), fileIndex.end(), IsDupAnEvent());
-      if (duplicate == fileIndex.end()) {
+      IndexIntoFile::const_iterator duplicate = std::adjacent_find(indexIntoFile.begin(), indexIntoFile.end(), IsDupAnEvent());
+      if (duplicate == indexIntoFile.end()) {
         itIsKnownTheFileHasNoDuplicates_ = true;
       }
     }
@@ -103,7 +103,8 @@ namespace {
       (duplicateCheckMode_ == checkEachRealDataFile && dataType_ == isSimulation);
   }
 
-  bool DuplicateChecker::isDuplicateAndCheckActive(EventID const& eventID,
+  bool DuplicateChecker::isDuplicateAndCheckActive(int index,
+                                                   EventID const& eventID,
                                                    std::string const& fileName)
   {
     if (itIsKnownTheFileHasNoDuplicates_) return false;
@@ -113,7 +114,7 @@ namespace {
       if(dataType_ == isSimulation) return false;
     }
 
-    FileIndex::Element newEvent(eventID.run(), eventID.luminosityBlock(), eventID.event());
+    IndexIntoFile::Element newEvent(index, eventID.run(), eventID.luminosityBlock(), eventID.event());
     bool duplicate = !relevantPreviousEvents_.insert(newEvent).second;
 
     if (duplicate) {
