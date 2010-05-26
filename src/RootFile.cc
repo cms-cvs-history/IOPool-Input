@@ -603,6 +603,7 @@ namespace edm {
     // Loop over event entries and fill the index from the event auxiliary branch
     while(eventTree_.next()) {
       fillEventAuxiliary();
+      fillHistory();
       indexIntoFile_.addEntry(history_->processHistoryID(),
                               eventAux().run(),
                               eventAux().luminosityBlock(),
