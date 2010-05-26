@@ -243,6 +243,9 @@ namespace edm {
     // Here we read the metadata tree
     input::getEntry(metaDataTree, 0);
 
+    // Here we read the event history tree
+    readEventHistoryTree();
+
     ParameterSetConverter::ParameterSetIdConverter psetIdConverter;
     if(!fileFormatVersion().triggerPathsTracked()) {
       ParameterSetConverter converter(psetMap, psetIdConverter, fileFormatVersion().parameterSetsByReference());
@@ -311,8 +314,6 @@ namespace edm {
     indexIntoFileEnd_ = indexIntoFile_.end();
     forcedRunOffset_ = forcedRunOffset(forcedRunNumber, indexIntoFileBegin_, indexIntoFileEnd_);
     eventProcessHistoryIter_ = eventProcessHistoryIDs_.begin();
-
-    readEventHistoryTree();
 
     // Set product presence information in the product registry.
     ProductRegistry::ProductList const& pList = inputProdDescReg.productList();
