@@ -243,6 +243,8 @@ namespace edm {
     // Here we read the metadata tree
     input::getEntry(metaDataTree, 0);
 
+    eventProcessHistoryIter_ = eventProcessHistoryIDs_.begin();
+
     // Here we read the event history tree
     readEventHistoryTree();
 
@@ -572,70 +574,155 @@ namespace edm {
     return IndexIntoFile::kEvent;
   }
 
+  namespace {
+    typedef long long  EntryNumber_t;
+    struct RunItem {
+      RunItem(ProcessHistoryID const& phid, RunNumber_t const& run, EntryNumber_t const& entry) :
+	phid_(phid), run_(run), entry_(entry) {}
+      ProcessHistoryID phid_;
+      RunNumber_t run_;
+      EntryNumber_t entry_;
+    };
+    struct LumiItem {
+      LumiItem(ProcessHistoryID const& phid, RunNumber_t const& run,
+		 LuminosityBlockNumber_t const& lumi, EntryNumber_t const& entry) :
+	phid_(phid), run_(run), lumi_(lumi), entry_(entry) {}
+      ProcessHistoryID phid_;
+      RunNumber_t run_;
+      LuminosityBlockNumber_t lumi_;
+      EntryNumber_t entry_;
+    };
+    struct EventItem {
+      EventItem(ProcessHistoryID const& phid, RunNumber_t const& run,
+		 LuminosityBlockNumber_t const& lumi, EventNumber_t const& event,
+		 EntryNumber_t const& entry) :
+	phid_(phid), run_(run), lumi_(lumi), event_(event), entry_(entry) {}
+      ProcessHistoryID phid_;
+      RunNumber_t run_;
+      LuminosityBlockNumber_t lumi_;
+      EventNumber_t event_;
+      EntryNumber_t entry_;
+    };
+  }
+
   void
   RootFile::fillIndexIntoFile() {
     // This function is for backward compatibility only.
     // If reading a current format file, indexIntoFile_ is read from the input file.
     //
-    // Loop over run entries and fill the index from the run auxiliary
-    // branch.  We do runs first because there can be runs with no events
-    // and the order ProcessHistoryIDs are first encountered matters.  We
-    // want to preserve the order in the input, not put the ProcessHistoryIDs
-    // associated with runs with no events last.
+    typedef std::map<RunNumber_t, RunItem> RunMap;
+    typedef std::map<LuminosityBlockID, LumiItem> LumiMap;
+
+    std::vector<RunNumber_t> runs;
+    RunMap runMap;
+    std::vector<LuminosityBlockID> lumis;
+    LumiMap lumiMap;
+    std::vector<EventItem> events;
+    
+    // Loop over run entries and fill information from the run auxiliary
     if (runTree_.isValid()) {
+      runs.reserve(runTree_.entries());
       while(runTree_.next()) {
         boost::shared_ptr<RunAuxiliary> runAuxiliary = fillRunAuxiliary();
-        indexIntoFile_.addEntry(runAuxiliary->processHistoryID(),
-                            runAuxiliary->run(), 0U, 0U, runTree_.entryNumber());
+	runs.push_back(runAuxiliary->run());
+        runMap.insert(std::make_pair(runAuxiliary->run(), RunItem(runAuxiliary->processHistoryID(), runAuxiliary->run(), runTree_.entryNumber())));
       }
       runTree_.setEntryNumber(-1);
     }
 
-    // Loop over luminosity block entries and fill the index from the lumi auxiliary branch
+    // Loop over luminosity block entries and fill information from the lumi auxiliary
     if(lumiTree_.isValid()) {
+      lumis.reserve(lumiTree_.entries());
       while(lumiTree_.next()) {
         boost::shared_ptr<LuminosityBlockAuxiliary> lumiAux = fillLumiAuxiliary();
-        indexIntoFile_.addEntry(lumiAux->processHistoryID(),
-                            lumiAux->run(), lumiAux->luminosityBlock(), 0U, lumiTree_.entryNumber());
+	LuminosityBlockID lbid(lumiAux->run(), lumiAux->luminosityBlock());
+	lumis.push_back(lbid);
+        lumiMap.insert(std::make_pair(lbid,
+	  LumiItem(lumiAux->processHistoryID(), lumiAux->run(), lumiAux->luminosityBlock(), lumiTree_.entryNumber())));
       }
       lumiTree_.setEntryNumber(-1);
     }
 
-    // Loop over event entries and fill the index from the event auxiliary branch
+    // Loop over event entries and fill information from the event auxiliary and event history
+    LuminosityBlockNumber_t lastLumi = 0;
+    RunNumber_t lastRun = 0;
+    ProcessHistoryID lastPhid;
+
+    events.reserve(eventTree_.entries());
     while(eventTree_.next()) {
       fillEventAuxiliary();
       fillHistory();
-      indexIntoFile_.addEntry(history_->processHistoryID(),
+      events.push_back(EventItem(history_->processHistoryID(),
                               eventAux().run(),
                               eventAux().luminosityBlock(),
                               eventAux().event(),
-                              eventTree_.entryNumber());
+                              eventTree_.entryNumber()));
 
-      LuminosityBlockNumber_t lastLumi = 0;
-      RunNumber_t lastRun = 0;
+      bool newPhid = (lastPhid != history_->processHistoryID());
+      bool newRun = (lastRun != eventAux().run());
+      bool newLumi = newRun || (lastLumi != eventAux().luminosityBlock());
 
-      // If the lumi tree is invalid, use the event tree to add lumi index entries.
-      if(!lumiTree_.isValid()) {
-	if(lastLumi != eventAux().luminosityBlock()) {
-	  lastLumi = eventAux().luminosityBlock();
-          indexIntoFile_.addEntry(history_->processHistoryID(),
-                              eventAux().run(), eventAux().luminosityBlock(), 0U, IndexIntoFile::Element::invalidEntry);
+      assert(newRun || !newPhid);
+
+      if (newPhid) {
+	lastPhid = history_->processHistoryID();
+      }
+      if (newRun) {
+        lastRun = eventAux().run();
+        if(runTree_.isValid()) {
+          // If the run tree is valid, use the event tree to set the run process history ID
+	  RunMap::iterator it = runMap.find(lastRun);
+	  assert (it != runMap.end());
+	  it->second.phid_ = lastPhid;
+	} else {
+          // If the run tree is invalid, use the event tree to add run entries.
+	  runs.push_back(lastRun);
+          runMap.insert(std::make_pair(lastRun, RunItem(lastPhid, lastRun, -1LL)));
 	}
       }
-      // If the run tree is invalid, use the event tree to add run index entries.
-      if(!runTree_.isValid()) {
-	if(lastRun != eventAux().run()) {
-	  lastRun = eventAux().run();
-          indexIntoFile_.addEntry(history_->processHistoryID(),
-                              eventAux().run(), 0U, 0U, IndexIntoFile::Element::invalidEntry);
-        }
+      if (newLumi) {
+        lastLumi = eventAux().luminosityBlock();
+	LuminosityBlockID lbid(lastRun, lastLumi);
+        if(lumiTree_.isValid()) {
+          // If the lumi tree is valid, use the event tree to set the lumi process history ID
+	  LumiMap::iterator it = lumiMap.find(lbid);
+	  assert (it != lumiMap.end());
+	  it->second.phid_ = lastPhid;
+	} else {
+          // If the lumi tree is invalid, use the event tree to add lumi entries.
+	  lumis.push_back(lbid);
+          lumiMap.insert(std::make_pair(lbid, LumiItem(lastPhid, lastRun, lastLumi, -1LL)));
+	}
       }
     }
     eventTree_.setEntryNumber(-1);
+    eventProcessHistoryIter_ = eventProcessHistoryIDs_.begin();
+
+    // Loop over run entries and fill the index.
+    // We do runs first because there can be runs with no events
+    // and the order ProcessHistoryIDs are first encountered matters.
+    // We want to preserve the order in the input, not put the ProcessHistoryIDs
+    // associated with runs with no events last.
+    for (std::vector<RunNumber_t>::const_iterator i = runs.begin(), iEnd = runs.end(); i != iEnd; ++i) {
+       RunMap::iterator it = runMap.find(*i);
+       assert (it != runMap.end());
+       indexIntoFile_.addEntry(it->second.phid_, it->second.run_, 0U, 0U, it->second.entry_);
+    }
+
+    // Loop over luminosity block entries and fill the index
+    for (std::vector<LuminosityBlockID>::const_iterator i = lumis.begin(), iEnd = lumis.end(); i != iEnd; ++i) {
+       LumiMap::iterator it = lumiMap.find(*i);
+       assert (it != lumiMap.end());
+       indexIntoFile_.addEntry(it->second.phid_, it->second.run_, it->second.lumi_, 0U, it->second.entry_);
+    }
+
+    // Loop over event entries and fill the index
+    for (std::vector<EventItem>::const_iterator i = events.begin(), iEnd = events.end(); i != iEnd; ++i) {
+       indexIntoFile_.addEntry(i->phid_, i->run_, i->lumi_, i->event_, i->entry_);
+    }
 
     // We want the ProcessHistoryIDs in the order encountered in all the
-    // input files, not in the order encountered in this particular input
-    // file.
+    // input files, not in the order encountered in this particular input file.
     indexIntoFile_.fixIndexes(orderedProcessHistoryIDs_);
 
     indexIntoFile_.sortBy_Index_Run_Lumi_Event();
@@ -910,28 +997,12 @@ namespace edm {
       runAuxiliary->setBeginTime(eventAux().time()); 
       runAuxiliary->setEndTime(Timestamp::invalidTimestamp());
     }
-    if(!fileFormatVersion().processHistorySameWithinRun()) {
-      // RunAuxiliary may not contain a full process history.
-      // Merge in the process history of the first event in the run.
-      if(eventTree_.next()) {
-        fillEventAuxiliary();
-	if(eventAux().run() == runAuxiliary->run()) {
-          fillHistory();
-          ProcessHistory phRun;
-          ProcessHistoryRegistry::instance()->getMapped(runAuxiliary->processHistoryID(), phRun);
-          ProcessHistory phEvent;
-          bool found2 = ProcessHistoryRegistry::instance()->getMapped(history_->processHistoryID(), phEvent);
-	  if (found2) {
-	    bool merged = phRun.mergeProcessHistory(phEvent);
-            if (merged) {
-              ProcessHistoryRegistry::instance()->insertMapped(phRun);
-	      runAuxiliary->setProcessHistoryID(phRun.id());
-	    }
-	  }
-        }
-        // back up, so event will not be skipped.
-        eventTree_.previous();
-      }
+    if(fileFormatVersion().processHistorySameWithinRun()) {
+      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+      assert(runAuxiliary->processHistoryID() == phid);
+    } else {
+      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+      runAuxiliary->setProcessHistoryID(phid);
     }
     return runAuxiliary;
   }
@@ -987,6 +1058,13 @@ namespace edm {
       }
       lumiAuxiliary->setBeginTime(eventAux().time());
       lumiAuxiliary->setEndTime(Timestamp::invalidTimestamp());
+    }
+    if(fileFormatVersion().processHistorySameWithinRun()) {
+      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+      assert(lumiAuxiliary->processHistoryID() == phid);
+    } else {
+      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+      lumiAuxiliary->setProcessHistoryID(phid);
     }
     return lumiAuxiliary;
   }
