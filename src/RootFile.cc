@@ -298,14 +298,35 @@ namespace edm {
       }
     }
 
-    // Remove any runs containing no lumis.
-    for(IndexIntoFile::iterator it = indexIntoFile_.begin(), itEnd = indexIntoFile_.end(); it != itEnd; ++it) {
+    // Remove any runs containing no lumis.  This was added so that when we exclude
+    // a range of lumis that includes all the lumis in a run, then we also exclude
+    // that run.
+    for(IndexIntoFile::iterator it = indexIntoFile_.begin(), itEnd = indexIntoFile_.end(); it != itEnd; ) {
       if(it->lumi() == 0) {
 	assert(it->event() == 0);
+
+        // set this iterator to the next element after the range
+        // of index elements that point to the same run
+	IndexIntoFile::iterator endSameRunNumber = it + 1;
+        while (endSameRunNumber != itEnd &&
+               endSameRunNumber->processHistoryIDIndex() == it->processHistoryIDIndex() &&
+               endSameRunNumber->run() == it->run() &&
+               endSameRunNumber->lumi() == it->lumi() &&
+               endSameRunNumber->event() == it->event()) {
+          ++endSameRunNumber;
+        }
+
 	IndexIntoFile::iterator next = it + 1;
-	if(next == itEnd || next->lumi() == 0) {
-	  *it = IndexIntoFile::Element();
+	if(endSameRunNumber == itEnd || endSameRunNumber->lumi() == 0) {
+          for (IndexIntoFile::iterator deleteIter = it; deleteIter != endSameRunNumber; ++deleteIter) {
+            *deleteIter = IndexIntoFile::Element();
+          }
 	}
+        it = endSameRunNumber;
+        
+      }
+      else {
+        ++it;
       }
     }
     indexIntoFile_.erase(std::remove(indexIntoFile_.begin(), indexIntoFile_.end(), IndexIntoFile::Element()), indexIntoFile_.end());
@@ -525,18 +546,25 @@ namespace edm {
     return indexIntoFileIter_;
   }
 
-  // Temporary KLUDGE until we can properly merge runs and lumis across files
-  // This KLUDGE skips duplicate run or lumi entries.
+  // This exists for backward compatibility to very old format
+  // files where there were duplicate run or lumi entries
+  // within a file and they should not be merged.  (Actually
+  // much older than the fileFormatVersion check would seem to
+  // to indicate, because immediately before that version there
+  // could only be one entry in a file per run number or per
+  // lumi number.)
   IndexIntoFile::EntryType
   RootFile::getEntryTypeSkippingDups() {
     if(indexIntoFileIter_ == indexIntoFileEnd_) {
       return IndexIntoFile::kEnd;
     }
-    if(indexIntoFileIter_->event() == 0 && indexIntoFileIter_ != indexIntoFileBegin_) {
-      if((indexIntoFileIter_-1)->run() == indexIntoFileIter_->run() && (indexIntoFileIter_-1)->lumi() == indexIntoFileIter_->lumi()) {
-	++indexIntoFileIter_;
-	return getEntryTypeSkippingDups();
-      } 
+    if(!fileFormatVersion().processHistorySameWithinRun()) {
+      if(indexIntoFileIter_->event() == 0 && indexIntoFileIter_ != indexIntoFileBegin_) {
+        if((indexIntoFileIter_-1)->run() == indexIntoFileIter_->run() && (indexIntoFileIter_-1)->lumi() == indexIntoFileIter_->lumi()) {
+	  ++indexIntoFileIter_;
+	  return getEntryTypeSkippingDups();
+        } 
+      }
     }
     return indexIntoFileIter_->getEntryType();
   }
