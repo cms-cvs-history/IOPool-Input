@@ -576,22 +576,6 @@ namespace edm {
 
   namespace {
     typedef long long  EntryNumber_t;
-    struct RunItem {
-      RunItem(ProcessHistoryID const& phid, RunNumber_t const& run, EntryNumber_t const& entry) :
-	phid_(phid), run_(run), entry_(entry) {}
-      ProcessHistoryID phid_;
-      RunNumber_t run_;
-      EntryNumber_t entry_;
-    };
-    struct LumiItem {
-      LumiItem(ProcessHistoryID const& phid, RunNumber_t const& run,
-		 LuminosityBlockNumber_t const& lumi, EntryNumber_t const& entry) :
-	phid_(phid), run_(run), lumi_(lumi), entry_(entry) {}
-      ProcessHistoryID phid_;
-      RunNumber_t run_;
-      LuminosityBlockNumber_t lumi_;
-      EntryNumber_t entry_;
-    };
     struct EventItem {
       EventItem(ProcessHistoryID const& phid, RunNumber_t const& run,
 		 LuminosityBlockNumber_t const& lumi, EventNumber_t const& event,
@@ -603,6 +587,46 @@ namespace edm {
       EventNumber_t event_;
       EntryNumber_t entry_;
     };
+    struct RunItem {
+      RunItem(ProcessHistoryID const& phid, RunNumber_t const& run, EntryNumber_t const& entry) :
+	phid_(phid), run_(run), entry_(entry), nevents_(0) {}
+      bool addEvent(EventItem const& event) {
+	assert(event.run_ == run_);
+	if (nevents_ == 0) {
+	  // Phid not yet set from event.  Set it.
+	  phid_ = event.phid_;
+        } else if (event.phid_ != phid_) {
+	  // Phid was already set from event, and it does not match.
+	  return false;
+	}
+	++nevents_;
+	return true;
+      }
+      ProcessHistoryID phid_;
+      RunNumber_t run_;
+      EntryNumber_t entry_;
+      unsigned int nevents_;
+    };
+    struct LumiItem {
+      LumiItem(ProcessHistoryID const& phid, RunNumber_t const& run,
+		 LuminosityBlockNumber_t const& lumi, EntryNumber_t const& entry) :
+	phid_(phid), run_(run), lumi_(lumi), entry_(entry), nevents_(0) {}
+      bool addEvent(EventItem const& event) {
+	assert(event.run_ == run_ && event.lumi_ == lumi_);
+	if (nevents_ == 0) {
+	  phid_ = event.phid_;
+        } else if (event.phid_ != phid_) {
+	  return false;
+	}
+	++nevents_;
+	return true;
+      }
+      ProcessHistoryID phid_;
+      RunNumber_t run_;
+      LuminosityBlockNumber_t lumi_;
+      EntryNumber_t entry_;
+      unsigned int nevents_;
+    };
   }
 
   void
@@ -610,35 +634,40 @@ namespace edm {
     // This function is for backward compatibility only.
     // If reading a current format file, indexIntoFile_ is read from the input file.
     //
-    typedef std::map<RunNumber_t, RunItem> RunMap;
-    typedef std::map<LuminosityBlockID, LumiItem> LumiMap;
+    typedef std::list<RunItem> RunList;
+    typedef std::list<LumiItem> LumiList;
+    typedef std::multimap<RunNumber_t, RunList::iterator> RunMap;
+    typedef std::multimap<LuminosityBlockID, LumiList::iterator> LumiMap;
+    typedef std::pair<RunMap::iterator, RunMap::iterator> RunRange;
+    typedef std::pair<LumiMap::iterator, LumiMap::iterator> LumiRange;
 
-    std::vector<RunNumber_t> runs;
+    RunList runs;
     RunMap runMap;
-    std::vector<LuminosityBlockID> lumis;
+    LumiList lumis;
     LumiMap lumiMap;
     std::vector<EventItem> events;
     
     // Loop over run entries and fill information from the run auxiliary
     if (runTree_.isValid()) {
-      runs.reserve(runTree_.entries());
       while(runTree_.next()) {
         boost::shared_ptr<RunAuxiliary> runAuxiliary = fillRunAuxiliary();
-	runs.push_back(runAuxiliary->run());
-        runMap.insert(std::make_pair(runAuxiliary->run(), RunItem(runAuxiliary->processHistoryID(), runAuxiliary->run(), runTree_.entryNumber())));
+        RunItem item(runAuxiliary->processHistoryID(), runAuxiliary->run(), runTree_.entryNumber());
+	runs.push_back(item);
+        RunList::iterator runIter = runs.end();
+        runMap.insert(std::make_pair(runAuxiliary->run(), --runIter));
       }
       runTree_.setEntryNumber(-1);
     }
 
     // Loop over luminosity block entries and fill information from the lumi auxiliary
     if(lumiTree_.isValid()) {
-      lumis.reserve(lumiTree_.entries());
       while(lumiTree_.next()) {
         boost::shared_ptr<LuminosityBlockAuxiliary> lumiAux = fillLumiAuxiliary();
+	LumiItem item(lumiAux->processHistoryID(), lumiAux->run(), lumiAux->luminosityBlock(), lumiTree_.entryNumber());
+	lumis.push_back(item);
 	LuminosityBlockID lbid(lumiAux->run(), lumiAux->luminosityBlock());
-	lumis.push_back(lbid);
-        lumiMap.insert(std::make_pair(lbid,
-	  LumiItem(lumiAux->processHistoryID(), lumiAux->run(), lumiAux->luminosityBlock(), lumiTree_.entryNumber())));
+        LumiList::iterator lumiIter = lumis.end();
+        lumiMap.insert(std::make_pair(lbid, --lumiIter));
       }
       lumiTree_.setEntryNumber(-1);
     }
@@ -657,63 +686,115 @@ namespace edm {
                               eventAux().luminosityBlock(),
                               eventAux().event(),
                               eventTree_.entryNumber()));
+      EventItem const* ev = &*events.rbegin();
+      RunList::iterator runIter = runs.begin();
+      LumiList::iterator lumiIter = lumis.begin();
 
       bool newPhid = (lastPhid != history_->processHistoryID());
-      bool newRun = (lastRun != eventAux().run());
+      bool newRun = newPhid || (lastRun != eventAux().run());
       bool newLumi = newRun || (lastLumi != eventAux().luminosityBlock());
-
-      assert(newRun || !newPhid);
 
       if (newPhid) {
 	lastPhid = history_->processHistoryID();
       }
       if (newRun) {
         lastRun = eventAux().run();
-        if(runTree_.isValid()) {
-          // If the run tree is valid, use the event tree to set the run process history ID
-	  RunMap::iterator it = runMap.find(lastRun);
-	  assert (it != runMap.end());
-	  it->second.phid_ = lastPhid;
-	} else {
+	RunRange matches = runMap.equal_range(lastRun);
+	if (matches.first == matches.second) {
+	  // No match to run.  This should not happen unless the run tree is invalid.
+	  assert(!runTree_.isValid());
           // If the run tree is invalid, use the event tree to add run entries.
-	  runs.push_back(lastRun);
-          runMap.insert(std::make_pair(lastRun, RunItem(lastPhid, lastRun, -1LL)));
+          RunItem item(lastPhid, lastRun, -1LL);
+	  runs.push_back(item);
+          runIter = runs.end();
+          runMap.insert(std::make_pair(lastRun, --runIter));
+        }
+	bool runMatched = false;
+	for (RunMap::iterator i = matches.first; i != matches.second && !runMatched; ++i) {
+	  RunList::iterator it = i->second;
+	  // addEvent will set the phid in the run from the event if it has not yet been set.
+	  runMatched = i->second->addEvent(*ev);
+	  if (runMatched) {
+	    runIter = i->second;
+	  }
+	}
+	if (!runMatched) {
+	  // Process history ID (and run number) did not match an existing run .  Create new run!
+          RunItem item(lastPhid, lastRun, matches.first->second->entry_);
+	  if (runIter != runs.end()) {
+	    ++runIter;
+	  }
+	  runs.insert(runIter, item);
+          runMap.insert(std::make_pair(lastRun, runIter));
 	}
       }
       if (newLumi) {
         lastLumi = eventAux().luminosityBlock();
 	LuminosityBlockID lbid(lastRun, lastLumi);
-        if(lumiTree_.isValid()) {
-          // If the lumi tree is valid, use the event tree to set the lumi process history ID
-	  LumiMap::iterator it = lumiMap.find(lbid);
-	  assert (it != lumiMap.end());
-	  it->second.phid_ = lastPhid;
-	} else {
+	LumiRange matches = lumiMap.equal_range(lbid);
+	if (matches.first == matches.second) {
+	  // No match to lumi.  This should not happen unless the lumi tree is invalid.
+	  assert(!lumiTree_.isValid());
           // If the lumi tree is invalid, use the event tree to add lumi entries.
-	  lumis.push_back(lbid);
-          lumiMap.insert(std::make_pair(lbid, LumiItem(lastPhid, lastRun, lastLumi, -1LL)));
+          LumiItem item(lastPhid, lastRun, lastLumi, -1LL);
+	  lumis.push_back(item);
+          lumiIter = lumis.end();
+          lumiMap.insert(std::make_pair(lbid, --lumiIter));
+        }
+	bool lumiMatched = false;
+	for (LumiMap::iterator i = matches.first; i != matches.second && !lumiMatched; ++i) {
+	  LumiList::iterator it = i->second;
+	  // addEvent will set the phid in the lumi from the event if it has not yet been set.
+	  lumiMatched = i->second->addEvent(*ev);
+	  if (lumiMatched) {
+	    lumiIter = i->second;
+	  }
+	}
+	if (!lumiMatched) {
+	  // Process history ID (and lumi ID) did not match an existing lumi.  Create new lumi!
+          LumiItem item(lastPhid, lastRun, lastLumi, matches.first->second->entry_);
+	  if (lumiIter != lumis.end()) {
+	    ++lumiIter;
+	  }
+	  lumis.insert(lumiIter, item);
+          lumiMap.insert(std::make_pair(lbid, lumiIter));
 	}
       }
     }
     eventTree_.setEntryNumber(-1);
     eventProcessHistoryIter_ = eventProcessHistoryIDs_.begin();
 
+    // If there are any lumis with no events, we need to set the process history ID to match
+    // that of the run containing the lumi.
+    for (LumiMap::iterator it = lumiMap.begin(), itEnd = lumiMap.end(); it != itEnd; ++it) {
+      if (it->second->nevents_ == 0) {
+	RunRange matches = runMap.equal_range(it->second->run_);
+	assert(matches.first != matches.second);
+	bool runMatched = false;
+	for (RunMap::iterator i = matches.first; i != matches.second && !runMatched; ++i) {
+	  runMatched = (it->second->phid_ == i->second->phid_);
+	}
+	// If runMatched is true, there was a run with a matching run number and process history ID.
+	// So we don't need to do anything.
+	// Otherwise, we set the lumi process history ID from the first matching run.
+	if (!runMatched) {
+	  it->second->phid_ = matches.first->second->phid_;
+	}
+      }
+    }
+
     // Loop over run entries and fill the index.
     // We do runs first because there can be runs with no events
     // and the order ProcessHistoryIDs are first encountered matters.
     // We want to preserve the order in the input, not put the ProcessHistoryIDs
     // associated with runs with no events last.
-    for (std::vector<RunNumber_t>::const_iterator i = runs.begin(), iEnd = runs.end(); i != iEnd; ++i) {
-       RunMap::iterator it = runMap.find(*i);
-       assert (it != runMap.end());
-       indexIntoFile_.addEntry(it->second.phid_, it->second.run_, 0U, 0U, it->second.entry_);
+    for (std::list<RunItem>::const_iterator it = runs.begin(), itEnd = runs.end(); it != itEnd; ++it) {
+       indexIntoFile_.addEntry(it->phid_, it->run_, 0U, 0U, it->entry_);
     }
 
     // Loop over luminosity block entries and fill the index
-    for (std::vector<LuminosityBlockID>::const_iterator i = lumis.begin(), iEnd = lumis.end(); i != iEnd; ++i) {
-       LumiMap::iterator it = lumiMap.find(*i);
-       assert (it != lumiMap.end());
-       indexIntoFile_.addEntry(it->second.phid_, it->second.run_, it->second.lumi_, 0U, it->second.entry_);
+    for (std::list<LumiItem>::const_iterator it = lumis.begin(), itEnd = lumis.end(); it != itEnd; ++it) {
+       indexIntoFile_.addEntry(it->phid_, it->run_, it->lumi_, 0U, it->entry_);
     }
 
     // Loop over event entries and fill the index
