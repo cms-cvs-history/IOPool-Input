@@ -1106,11 +1106,10 @@ namespace edm {
       runAuxiliary->setBeginTime(eventAux().time()); 
       runAuxiliary->setEndTime(Timestamp::invalidTimestamp());
     }
+    ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
     if(fileFormatVersion().processHistorySameWithinRun()) {
-      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
       assert(runAuxiliary->processHistoryID() == phid);
     } else {
-      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
       runAuxiliary->setProcessHistoryID(phid);
     }
     return runAuxiliary;
