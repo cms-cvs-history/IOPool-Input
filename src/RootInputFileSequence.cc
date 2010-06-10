@@ -6,7 +6,6 @@
 #include "RootTree.h"
 #include "DuplicateChecker.h"
 
-#include "FWCore/Catalog/interface/FileCatalog.h"
 #include "FWCore/Catalog/interface/SiteLocalConfig.h"
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/Framework/interface/FileBlock.h"
@@ -175,7 +174,7 @@ namespace edm {
     if(filePtr && !filePtr->IsZombie()) {
       logFileAction("  Successfully opened file ", fileIter_->fileName());
       std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentFileIndex = fileIter_ - fileIterBegin_;
-      rootFile_ = RootFileSharedPtr(new RootFile(fileIter_->fileName(), catalog_.url(),
+      rootFile_ = RootFileSharedPtr(new RootFile(fileIter_->fileName(),
 	  processConfiguration(), fileIter_->logicalFileName(), filePtr,
 	  eventSkipperByID_, numberOfEventsToSkip_ != 0,
 	  remainingEvents(), remainingLuminosityBlocks(), treeCacheSize_, treeMaxVirtualSize_,
@@ -641,13 +640,11 @@ namespace edm {
   }
 
   void RootInputFileSequence::logFileAction(const char* msg, std::string const& file) {
-    if(primarySequence_) {
-      time_t t = time(0);
-      char ts[] = "dd-Mon-yyyy hh:mm:ss TZN     ";
-      strftime( ts, strlen(ts)+1, "%d-%b-%Y %H:%M:%S %Z", localtime(&t) );
-      LogAbsolute("fileAction") << ts << msg << file;
-      FlushMessageLog();
-    }
+    time_t t = time(0);
+    char ts[] = "dd-Mon-yyyy hh:mm:ss TZN     ";
+    strftime( ts, strlen(ts)+1, "%d-%b-%Y %H:%M:%S %Z", localtime(&t) );
+    LogAbsolute("fileAction") << ts << msg << file;
+    FlushMessageLog();
   }
 
   void
