@@ -100,7 +100,7 @@ namespace edm {
     std::vector<boost::shared_ptr<IndexIntoFile> > indexesIntoFiles_;
     std::vector<ProcessHistoryID> orderedProcessHistoryIDs_;
 
-    boost::scoped_ptr<EventSkipperByID> eventSkipperByID_;
+    boost::shared_ptr<EventSkipperByID> eventSkipperByID_;
     int eventsRemainingInFile_;
     RunNumber_t currentRun_;
     LuminosityBlockNumber_t currentLumi_;

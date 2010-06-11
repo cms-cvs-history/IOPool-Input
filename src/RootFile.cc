@@ -75,7 +75,7 @@ namespace edm {
 		     ProcessConfiguration const& processConfiguration,
 		     std::string const& logicalFileName,
 		     boost::shared_ptr<TFile> filePtr,
-		     boost::scoped_ptr<EventSkipperByID> const& eventSkipperByID,
+		     boost::shared_ptr<EventSkipperByID> eventSkipperByID,
 		     bool skipAnyEvents,
 		     int remainingEvents,
 		     int remainingLumis,
@@ -95,6 +95,7 @@ namespace edm {
       logicalFile_(logicalFileName),
       processConfiguration_(processConfiguration),
       filePtr_(filePtr),
+      eventSkipperByID_(eventSkipperByID),
       fileFormatVersion_(),
       fid_(),
       indexIntoFileSharedPtr_(new IndexIntoFile),
@@ -287,47 +288,9 @@ namespace edm {
     // Read the parentage tree.  Old format files are handled internally in readParentageTree().
     readParentageTree();
 
-    if (eventSkipperByID) {
-      size_t entries = indexIntoFile_.size();
-      // Remove runs, lumis, and/or events we do not wish to process by ID.
-      indexIntoFile_.erase(std::remove_if(indexIntoFile_.begin(), indexIntoFile_.end(), *eventSkipperByID), indexIntoFile_.end());
-      if (entries != indexIntoFile_.size()) {
-        whyNotFastClonable_ += FileBlock::EventsOrLumisSelectedByID;
-      }
+    if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
+      whyNotFastClonable_ += FileBlock::EventsOrLumisSelectedByID;
     }
-
-    // Remove any runs containing no lumis.  This was added so that when we exclude
-    // a range of lumis that includes all the lumis in a run, then we also exclude
-    // that run.
-    for(IndexIntoFile::iterator it = indexIntoFile_.begin(), itEnd = indexIntoFile_.end(); it != itEnd; ) {
-      if(it->lumi() == 0) {
-	assert(it->event() == 0);
-
-        // set this iterator to the next element after the range
-        // of index elements that point to the same run
-	IndexIntoFile::iterator endSameRunNumber = it + 1;
-        while (endSameRunNumber != itEnd &&
-               endSameRunNumber->processHistoryIDIndex() == it->processHistoryIDIndex() &&
-               endSameRunNumber->run() == it->run() &&
-               endSameRunNumber->lumi() == it->lumi() &&
-               endSameRunNumber->event() == it->event()) {
-          ++endSameRunNumber;
-        }
-
-	IndexIntoFile::iterator next = it + 1;
-	if(endSameRunNumber == itEnd || endSameRunNumber->lumi() == 0) {
-          for (IndexIntoFile::iterator deleteIter = it; deleteIter != endSameRunNumber; ++deleteIter) {
-            *deleteIter = IndexIntoFile::Element();
-          }
-	}
-        it = endSameRunNumber;
-        
-      }
-      else {
-        ++it;
-      }
-    }
-    indexIntoFile_.erase(std::remove(indexIntoFile_.begin(), indexIntoFile_.end(), IndexIntoFile::Element()), indexIntoFile_.end());
 
     initializeDuplicateChecker(indexesIntoFiles, currentIndexIntoFile);
     if(noEventSort_) indexIntoFile_.sortBy_Index_Run_Lumi_Entry();
@@ -530,39 +493,42 @@ namespace edm {
     return newBranch;
   }
 
-  IndexIntoFile::EntryType
-  RootFile::getEntryType() const {
-    if(indexIntoFileIter_ == indexIntoFileEnd_) {
-      return IndexIntoFile::kEnd;
-    }
-    return indexIntoFileIter_->getEntryType();
-  }
-
   IndexIntoFile::const_iterator
   RootFile::indexIntoFileIter() const {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
     return indexIntoFileIter_;
   }
 
-  // This exists for backward compatibility to very old format
-  // files where there were duplicate run or lumi entries
-  // within a file and they should not be merged.  (Actually
-  // much older than the fileFormatVersion check would seem to
-  // to indicate, because immediately before that version there
-  // could only be one entry in a file per run number or per
-  // lumi number.)
-  IndexIntoFile::EntryType
-  RootFile::getEntryTypeSkippingDups() {
+  bool
+  RootFile::skipThisEntry() const {
     if(indexIntoFileIter_ == indexIntoFileEnd_) {
-      return IndexIntoFile::kEnd;
+        return false;
     }
     if(!fileFormatVersion().processHistorySameWithinRun()) {
+	// This exists for backward compatibility to very old format
+	// files where there were duplicate run or lumi entries
+	// within a file and they should not be merged.  (Actually
+	// much older than the fileFormatVersion check would seem to
+	// to indicate, because immediately before that version there
+	// could only be one entry in a file per run number or per
+	// lumi number.)
       if(indexIntoFileIter_->event() == 0 && indexIntoFileIter_ != indexIntoFileBegin_) {
         if((indexIntoFileIter_-1)->run() == indexIntoFileIter_->run() && (indexIntoFileIter_-1)->lumi() == indexIntoFileIter_->lumi()) {
-	  ++indexIntoFileIter_;
-	  return getEntryTypeSkippingDups();
+	  return true;
         } 
       }
+    }
+    return (eventSkipperByID_ &&
+	eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), indexIntoFileIter_->event()));
+  }
+
+  IndexIntoFile::EntryType
+  RootFile::getEntryTypeWithSkipping() {
+    while(skipThisEntry()) {
+      ++indexIntoFileIter_;
+    }
+    if(indexIntoFileIter_ == indexIntoFileEnd_) {
+      return IndexIntoFile::kEnd;
     }
     return indexIntoFileIter_->getEntryType();
   }
@@ -577,7 +543,7 @@ namespace edm {
 
   IndexIntoFile::EntryType
   RootFile::getNextEntryTypeWanted() {
-    IndexIntoFile::EntryType entryType = getEntryTypeSkippingDups();
+    IndexIntoFile::EntryType entryType = getEntryTypeWithSkipping();
     if(entryType == IndexIntoFile::kEnd) {
       return IndexIntoFile::kEnd;
     }
@@ -982,6 +948,10 @@ namespace edm {
   RootFile::skipEvents(int& offset) {
     for(;offset > 0 && indexIntoFileIter_ != indexIntoFileEnd_; ++indexIntoFileIter_) {
       if(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
+        if (eventSkipperByID_ && eventSkipperByID_->skipIt(
+	    indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), indexIntoFileIter_->event())) {
+          continue;
+        }
 	if(isDuplicateEvent()) {
 	  continue;
 	}
@@ -991,6 +961,10 @@ namespace edm {
     while(offset < 0 && indexIntoFileIter_ != indexIntoFileBegin_) {
       --indexIntoFileIter_;
       if(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
+        if (eventSkipperByID_ && eventSkipperByID_->skipIt(
+	    indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), indexIntoFileIter_->event())) {
+          continue;
+        }
 	if(isDuplicateEvent()) {
 	  continue;
 	}

@@ -58,7 +58,7 @@ namespace edm {
 	     ProcessConfiguration const& processConfiguration,
 	     std::string const& logicalFileName,
 	     boost::shared_ptr<TFile> filePtr,
-	     boost::scoped_ptr<EventSkipperByID> const& eventSkipperByID,
+	     boost::shared_ptr<EventSkipperByID> eventSkipperByID,
 	     bool skipAnyEvents,
 	     int remainingEvents,
 	     int remainingLumis,
@@ -83,12 +83,10 @@ namespace edm {
 		 boost::shared_ptr<LuminosityBlockPrincipal> lb = boost::shared_ptr<LuminosityBlockPrincipal>());
 
     boost::shared_ptr<LuminosityBlockAuxiliary> readLuminosityBlockAuxiliary_();
-    boost::shared_ptr<LuminosityBlockPrincipal> readLuminosityBlock_();
     boost::shared_ptr<RunAuxiliary> readRunAuxiliary_();
     boost::shared_ptr<RunPrincipal> readRun_(boost::shared_ptr<RunPrincipal> rpCache);
     boost::shared_ptr<LuminosityBlockPrincipal> readLumi(boost::shared_ptr<LuminosityBlockPrincipal> lbCache);
     std::string const& file() const {return file_;}
-    boost::shared_ptr<RunPrincipal> readRun_(boost::shared_ptr<RunPrincipal> rpCache, boost::shared_ptr<ProductRegistry const> pReg);
     boost::shared_ptr<ProductRegistry const> productRegistry() const {return productRegistry_;}
     BranchIDListRegistry::collection_type const& branchIDLists() {return *branchIDLists_;}
     EventAuxiliary const& eventAux() const {return eventAux_;}
@@ -97,7 +95,6 @@ namespace edm {
     LuminosityBlockNumber_t const& luminosityBlockNumber() const {return indexIntoFileIter()->lumi();}
     RunNumber_t const& runNumber() const {return indexIntoFileIter()->run();}
     EventID const& eventID() const {return eventAux().id();}
-    RootTreePtrArray & treePointers() {return treePointers_;}
     RootTree const& eventTree() const {return eventTree_;}
     RootTree const& lumiTree() const {return lumiTree_;}
     RootTree const & runTree() const {return runTree_;}
@@ -124,14 +121,14 @@ namespace edm {
 
     bool skipEvents(int& offset);
     bool nextEventEntry() {return eventTree_.next();}
-    IndexIntoFile::EntryType getEntryType() const;
-    IndexIntoFile::EntryType getEntryTypeSkippingDups();
     IndexIntoFile::EntryType getNextEntryTypeWanted();
     boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr() const {
       return indexIntoFileSharedPtr_;
     }
-
   private:
+    RootTreePtrArray & treePointers() {return treePointers_;}
+    bool skipThisEntry() const;
+    IndexIntoFile::EntryType getEntryTypeWithSkipping();
     IndexIntoFile::const_iterator indexIntoFileIter() const;
     void setIfFastClonable(int remainingEvents, int remainingLumis);
     void validateFile();
@@ -159,6 +156,7 @@ namespace edm {
     std::string const logicalFile_;
     ProcessConfiguration const& processConfiguration_;
     boost::shared_ptr<TFile> filePtr_;
+    boost::shared_ptr<EventSkipperByID> eventSkipperByID_;
     FileFormatVersion fileFormatVersion_;
     FileID fid_;
     boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr_;
