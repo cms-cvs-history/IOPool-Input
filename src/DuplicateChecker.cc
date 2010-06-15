@@ -14,10 +14,10 @@ namespace edm {
 namespace {
   struct IsDupAnEvent {
     bool operator()(IndexIntoFile::Element const& e) {
-      return e.event() != 0U;
+      return e.getEntryType() == IndexIntoFile::kEvent;
     }
     bool operator()(IndexIntoFile::Element const& first, IndexIntoFile::Element const& next) {
-      return first == next && first.event() != 0U;
+      return first == next && first.getEntryType() == IndexIntoFile::kEvent;
     }
   };
 }
