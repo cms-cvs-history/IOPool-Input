@@ -520,12 +520,18 @@ namespace edm {
       }
     }
     if (eventSkipperByID_) {
-      EventNumber_t eventNum = 0U;
+      // See first if the entire lumi is skipped, so we won't have to read the event Auxiliary in that case.
+      bool skipTheLumi = eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), 0U);
+      if (skipTheLumi) {
+        return true;
+      }
+      // The Lumi is not skipped.  If this is an event, see if the event is skipped.
       if (indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
         fillEventAuxiliary();
-	eventNum = eventAux_.id().event();
+        return(eventSkipperByID_->skipIt(indexIntoFileIter_->run(),
+					 indexIntoFileIter_->lumi(),
+					 eventAux_.id().event()));
       }
-      return(eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), eventNum));
     }
     return false;
   }
