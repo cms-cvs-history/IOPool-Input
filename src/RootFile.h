@@ -177,6 +177,7 @@ namespace edm {
     RootTree lumiTree_;
     RootTree runTree_;
     RootTreePtrArray treePointers_;
+    IndexIntoFile::EntryNumber_t lastEventEntryNumberRead_;
     boost::shared_ptr<ProductRegistry const> productRegistry_;
     boost::shared_ptr<BranchIDListRegistry::collection_type const> branchIDLists_;
     InputSource::ProcessingMode processingMode_;

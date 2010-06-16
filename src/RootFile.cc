@@ -115,6 +115,7 @@ namespace edm {
       lumiTree_(filePtr_, InLumi),
       runTree_(filePtr_, InRun),
       treePointers_(),
+      lastEventEntryNumberRead_(-1LL),
       productRegistry_(),
       branchIDLists_(),
       processingMode_(processingMode),
@@ -577,7 +578,7 @@ namespace edm {
   }
 
   namespace {
-    typedef long long  EntryNumber_t;
+    typedef IndexIntoFile::EntryNumber_t  EntryNumber_t;
     struct EventItem {
       EventItem(ProcessHistoryID const& phid, RunNumber_t const& run,
 		 LuminosityBlockNumber_t const& lumi, EventNumber_t const& event,
@@ -860,6 +861,10 @@ namespace edm {
 
   void
   RootFile::fillThisEventAuxiliary() {
+    if (lastEventEntryNumberRead_ == eventTree_.entryNumber()) {
+      // Already read.
+      return;
+    }
     if(fileFormatVersion().newAuxiliary()) {
       EventAuxiliary *pEvAux = &eventAux_;
       eventTree_.fillAux<EventAuxiliary>(pEvAux);
@@ -870,6 +875,7 @@ namespace edm {
       eventTree_.fillAux<EventAux>(pEvAux);
       conversion(eventAux, eventAux_);
     }
+    lastEventEntryNumberRead_ = eventTree_.entryNumber();
   }
 
   void
