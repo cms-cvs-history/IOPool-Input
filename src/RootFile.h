@@ -90,7 +90,7 @@ namespace edm {
     boost::shared_ptr<ProductRegistry const> productRegistry() const {return productRegistry_;}
     BranchIDListRegistry::collection_type const& branchIDLists() {return *branchIDLists_;}
     EventAuxiliary const& eventAux() const {return eventAux_;}
-    EventNumber_t const& eventNumber() const {return indexIntoFileIter()->event();}
+    EventNumber_t eventNumber();
     IndexIntoFile::EntryNumber_t const& entryNumber() const {return indexIntoFileIter()->entry();}
     LuminosityBlockNumber_t const& luminosityBlockNumber() const {return indexIntoFileIter()->lumi();}
     RunNumber_t const& runNumber() const {return indexIntoFileIter()->run();}
@@ -127,13 +127,14 @@ namespace edm {
     }
   private:
     RootTreePtrArray & treePointers() {return treePointers_;}
-    bool skipThisEntry() const;
+    bool skipThisEntry();
     IndexIntoFile::EntryType getEntryTypeWithSkipping();
     IndexIntoFile::const_iterator indexIntoFileIter() const;
     void setIfFastClonable(int remainingEvents, int remainingLumis);
     void validateFile();
     void fillIndexIntoFile();
     void fillEventAuxiliary();
+    void fillThisEventAuxiliary();
     void fillHistory();
     boost::shared_ptr<LuminosityBlockAuxiliary> fillLumiAuxiliary();
     boost::shared_ptr<RunAuxiliary> fillRunAuxiliary();
@@ -145,7 +146,7 @@ namespace edm {
     void readParentageTree();
     void readEntryDescriptionTree();
     void readEventHistoryTree();
-    bool isDuplicateEvent() const;
+    bool isDuplicateEvent();
 
     void initializeDuplicateChecker(std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
                                     std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentIndexIntoFile);
