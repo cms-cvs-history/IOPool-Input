@@ -519,7 +519,7 @@ namespace edm {
         } 
       }
     }
-    if (eventSkipperByID_) {
+    if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
       // See first if the entire lumi is skipped, so we won't have to read the event Auxiliary in that case.
       bool skipTheLumi = eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), 0U);
       if (skipTheLumi) {
@@ -976,7 +976,7 @@ namespace edm {
   RootFile::skipEvents(int& offset) {
     for(;offset > 0 && indexIntoFileIter_ != indexIntoFileEnd_; ++indexIntoFileIter_) {
       if(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
-        if (eventSkipperByID_) {
+        if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
 	  fillEventAuxiliary();
 	  if (eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), eventAux_.id().event())) {
 	    continue;
@@ -991,7 +991,7 @@ namespace edm {
     while(offset < 0 && indexIntoFileIter_ != indexIntoFileBegin_) {
       --indexIntoFileIter_;
       if(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
-        if (eventSkipperByID_) {
+        if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
 	  fillEventAuxiliary();
 	  if (eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), eventAux_.id().event())) {
 	    continue;
