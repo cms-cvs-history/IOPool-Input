@@ -90,10 +90,9 @@ namespace edm {
     boost::shared_ptr<ProductRegistry const> productRegistry() const {return productRegistry_;}
     BranchIDListRegistry::collection_type const& branchIDLists() {return *branchIDLists_;}
     EventAuxiliary const& eventAux() const {return eventAux_;}
-    EventNumber_t eventNumber();
-    IndexIntoFile::EntryNumber_t const& entryNumber() const {return indexIntoFileIter()->entry();}
-    LuminosityBlockNumber_t const& luminosityBlockNumber() const {return indexIntoFileIter()->lumi();}
-    RunNumber_t const& runNumber() const {return indexIntoFileIter()->run();}
+    // IndexIntoFile::EntryNumber_t const& entryNumber() const {return indexIntoFileIter().entry();}
+    // LuminosityBlockNumber_t const& luminosityBlockNumber() const {return indexIntoFileIter().lumi();}
+    // RunNumber_t const& runNumber() const {return indexIntoFileIter().run();}
     EventID const& eventID() const {return eventAux().id();}
     RootTree const& eventTree() const {return eventTree_;}
     RootTree const& lumiTree() const {return lumiTree_;}
@@ -105,10 +104,10 @@ namespace edm {
       return event ? setEntryAtEvent(run, lumi, event) : (lumi ? setEntryAtLumi(run, lumi) : setEntryAtRun(run));
     }
     bool setEntryAtEvent(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event);
-    bool setEntryAtEventEntry(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event, IndexIntoFile::EntryNumber_t entry);
     bool setEntryAtLumi(RunNumber_t run, LuminosityBlockNumber_t lumi);
     bool setEntryAtRun(RunNumber_t run);
     void setAtEventEntry(IndexIntoFile::EntryNumber_t entry);
+
     void rewind() {
       indexIntoFileIter_ = indexIntoFileBegin_;
       eventTree_.rewind();
@@ -129,10 +128,12 @@ namespace edm {
     RootTreePtrArray & treePointers() {return treePointers_;}
     bool skipThisEntry();
     IndexIntoFile::EntryType getEntryTypeWithSkipping();
-    IndexIntoFile::const_iterator indexIntoFileIter() const;
+    IndexIntoFile::IndexIntoFileItr indexIntoFileIter() const;
     void setIfFastClonable(int remainingEvents, int remainingLumis);
     void validateFile();
     void fillIndexIntoFile();
+    void fillEventNumbersInIndex();
+    void fillEventEntriesInIndex();
     void fillEventAuxiliary();
     void fillThisEventAuxiliary();
     void fillHistory();
@@ -163,9 +164,9 @@ namespace edm {
     boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr_;
     IndexIntoFile & indexIntoFile_;
     std::vector<ProcessHistoryID> & orderedProcessHistoryIDs_;
-    IndexIntoFile::const_iterator indexIntoFileBegin_;
-    IndexIntoFile::const_iterator indexIntoFileEnd_;
-    IndexIntoFile::const_iterator indexIntoFileIter_;
+    IndexIntoFile::IndexIntoFileItr indexIntoFileBegin_;
+    IndexIntoFile::IndexIntoFileItr indexIntoFileEnd_;
+    IndexIntoFile::IndexIntoFileItr indexIntoFileIter_;
     std::vector<EventProcessHistoryID> eventProcessHistoryIDs_;  // backward compatibility
     std::vector<EventProcessHistoryID>::const_iterator eventProcessHistoryIter_; // backward compatibility
     bool skipAnyEvents_;

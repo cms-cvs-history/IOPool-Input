@@ -57,10 +57,8 @@ namespace edm {
     void closeFile_();
     void endJob();
     InputSource::ItemType getNextItemType();
-    boost::shared_ptr<LuminosityBlockPrincipal> readIt(LuminosityBlockID const& id);
-    boost::shared_ptr<RunPrincipal> readIt(RunID const& run);
     bool skipEvents(int offset, PrincipalCache& cache);
-    bool skipToItem(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event, bool record);
+    bool skipToItem(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event);
     void rewind_();
     void reset(PrincipalCache& cache);
     void readMany(int number, EventPrincipalVector& result);
@@ -75,7 +73,6 @@ namespace edm {
     bool nextFile(PrincipalCache& cache);
     bool previousFile(PrincipalCache& cache);
     void rewindFile();
-    void setSkipInfo();
     std::vector<FileCatalogItem> const& fileCatalogItems() const;
 
     boost::shared_ptr<ProductRegistry const> productRegistry() const;
@@ -102,12 +99,6 @@ namespace edm {
 
     boost::shared_ptr<EventSkipperByID> eventSkipperByID_;
     int eventsRemainingInFile_;
-    RunNumber_t currentRun_;
-    LuminosityBlockNumber_t currentLumi_;
-    RunNumber_t skippedToRun_;
-    LuminosityBlockNumber_t skippedToLumi_;
-    EventNumber_t skippedToEvent_;
-    IndexIntoFile::EntryNumber_t skippedToEntry_;
     int numberOfEventsToSkip_;
     bool noEventSort_;
     bool skipBadFiles_;

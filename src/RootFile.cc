@@ -55,10 +55,10 @@
 namespace edm {
   namespace {
     int
-    forcedRunOffset(RunNumber_t const& forcedRunNumber, IndexIntoFile::const_iterator inxBegin, IndexIntoFile::const_iterator inxEnd) {
+    forcedRunOffset(RunNumber_t const& forcedRunNumber, IndexIntoFile::IndexIntoFileItr inxBegin, IndexIntoFile::IndexIntoFileItr inxEnd) {
       if(inxBegin == inxEnd) return 0;
-      int defaultOffset = (inxBegin->run() != 0 ? 0 : 1);
-      int offset = (forcedRunNumber != 0U ? forcedRunNumber - inxBegin->run() : defaultOffset);
+      int defaultOffset = (inxBegin.run() != 0 ? 0 : 1);
+      int offset = (forcedRunNumber != 0U ? forcedRunNumber - inxBegin.run() : defaultOffset);
       if(offset < 0) {
         throw edm::Exception(errors::Configuration)
           << "The value of the 'setRunNumber' parameter must not be\n"
@@ -101,7 +101,7 @@ namespace edm {
       indexIntoFileSharedPtr_(new IndexIntoFile),
       indexIntoFile_(*indexIntoFileSharedPtr_),
       orderedProcessHistoryIDs_(orderedProcessHistoryIDs),
-      indexIntoFileBegin_(indexIntoFile_.begin()),
+      indexIntoFileBegin_(indexIntoFile_.begin(!noEventSort)),
       indexIntoFileEnd_(indexIntoFileBegin_),
       indexIntoFileIter_(indexIntoFileBegin_),
       eventProcessHistoryIDs_(),
@@ -294,9 +294,8 @@ namespace edm {
     }
 
     initializeDuplicateChecker(indexesIntoFiles, currentIndexIntoFile);
-    if(noEventSort_) indexIntoFile_.sortBy_Index_Run_Lumi_Entry();
-    indexIntoFileIter_ = indexIntoFileBegin_ = indexIntoFile_.begin();
-    indexIntoFileEnd_ = indexIntoFile_.end();
+    indexIntoFileIter_ = indexIntoFileBegin_ = indexIntoFile_.begin(!noEventSort);
+    indexIntoFileEnd_ = indexIntoFile_.end(!noEventSort);
     forcedRunOffset_ = forcedRunOffset(forcedRunNumber, indexIntoFileBegin_, indexIntoFileEnd_);
     eventProcessHistoryIter_ = eventProcessHistoryIDs_.begin();
 
@@ -434,8 +433,8 @@ namespace edm {
       return;
     }
     // Find entry for first event in file
-    IndexIntoFile::const_iterator it = indexIntoFileBegin_;
-    while(it != indexIntoFileEnd_ && it->getEntryType() != IndexIntoFile::kEvent) {
+    IndexIntoFile::IndexIntoFileItr it = indexIntoFileBegin_;
+    while(it != indexIntoFileEnd_ && it.getEntryType() != IndexIntoFile::kEvent) {
       ++it;
     }
     if(it == indexIntoFileEnd_) {
@@ -444,7 +443,7 @@ namespace edm {
     }
 
     // From here on, record all reasons we can't fast clone.
-    if(!indexIntoFile_.allEventsInEntryOrder()) {
+    if(!indexIntoFile_.allEventsInEntryOrder(!noEventSort_)) {
       whyNotFastClonable_ += FileBlock::EventsToBeSorted;
     }
     if(skipAnyEvents_) {
@@ -494,7 +493,7 @@ namespace edm {
     return newBranch;
   }
 
-  IndexIntoFile::const_iterator
+  IndexIntoFile::IndexIntoFileItr
   RootFile::indexIntoFileIter() const {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
     return indexIntoFileIter_;
@@ -505,6 +504,7 @@ namespace edm {
     if(indexIntoFileIter_ == indexIntoFileEnd_) {
         return false;
     }
+    /* I think we should deal with this when filling the IndexIntoFile
     if(!fileFormatVersion().processHistorySameWithinRun()) {
 	// This exists for backward compatibility to very old format
 	// files where there were duplicate run or lumi entries
@@ -519,17 +519,18 @@ namespace edm {
         } 
       }
     }
+    */
     if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
       // See first if the entire lumi is skipped, so we won't have to read the event Auxiliary in that case.
-      bool skipTheLumi = eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), 0U);
+      bool skipTheLumi = eventSkipperByID_->skipIt(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), 0U);
       if (skipTheLumi) {
         return true;
       }
       // The Lumi is not skipped.  If this is an event, see if the event is skipped.
-      if (indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
+      if (indexIntoFileIter_.getEntryType() == IndexIntoFile::kEvent) {
         fillEventAuxiliary();
-        return(eventSkipperByID_->skipIt(indexIntoFileIter_->run(),
-					 indexIntoFileIter_->lumi(),
+        return(eventSkipperByID_->skipIt(indexIntoFileIter_.run(),
+					 indexIntoFileIter_.lumi(),
 					 eventAux_.id().event()));
       }
     }
@@ -544,18 +545,18 @@ namespace edm {
     if(indexIntoFileIter_ == indexIntoFileEnd_) {
       return IndexIntoFile::kEnd;
     }
-    return indexIntoFileIter_->getEntryType();
+    return indexIntoFileIter_.getEntryType();
   }
 
   bool
   RootFile::isDuplicateEvent() {
-    assert (indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent);
+    assert (indexIntoFileIter_.getEntryType() == IndexIntoFile::kEvent);
     if (duplicateChecker_.get() == 0) {
       return false;
     }
     fillEventAuxiliary();
-    return duplicateChecker_->isDuplicateAndCheckActive(indexIntoFileIter_->processHistoryIDIndex(),
-	EventID(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), eventAux_.id().event()), file_);
+    return duplicateChecker_->isDuplicateAndCheckActive(indexIntoFileIter_.processHistoryIDIndex(),
+	EventID(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), eventAux_.id().event()), file_);
   }
 
   IndexIntoFile::EntryType
@@ -567,13 +568,13 @@ namespace edm {
     if(entryType == IndexIntoFile::kRun) {
       return IndexIntoFile::kRun;
     } else if(processingMode_ == InputSource::Runs) {
-      indexIntoFileIter_ = indexIntoFile_.findNextRun(indexIntoFileIter_);      
+      indexIntoFileIter_.advanceToNextRun();      
       return getNextEntryTypeWanted();
     }
     if(entryType == IndexIntoFile::kLumi) {
       return IndexIntoFile::kLumi;
     } else if(processingMode_ == InputSource::RunsAndLumis) {
-      indexIntoFileIter_ = indexIntoFile_.findNextLumiOrRun(indexIntoFileIter_);      
+      indexIntoFileIter_.advanceToNextLumiOrRun();      
       return getNextEntryTypeWanted();
     }
     if(isDuplicateEvent()) {
@@ -640,6 +641,7 @@ namespace edm {
 
   void
   RootFile::fillIndexIntoFile() {
+    /*
     // This function is for backward compatibility only.
     // If reading a current format file, indexIntoFile_ is read from the input file.
     //
@@ -816,6 +818,80 @@ namespace edm {
     indexIntoFile_.fixIndexes(orderedProcessHistoryIDs_);
 
     indexIntoFile_.sortBy_Index_Run_Lumi_Event();
+    */
+  }
+
+  void
+  RootFile::fillEventNumbersInIndex() {
+
+    indexIntoFile_.eventNumbers().resize(eventTree_.entries(), IndexIntoFile::invalidEvent);
+
+    long long offset = 0;
+    long long previousBeginEventNumbers = -1;
+
+    for (IndexIntoFile::SortedRunOrLumiItr runOrLumi = indexIntoFile_.beginRunOrLumi(),
+                                             endRunOrLumi = indexIntoFile_.endRunOrLumi();
+         runOrLumi != endRunOrLumi; ++runOrLumi) {
+
+      if (runOrLumi.isRun()) continue;
+
+      long long beginEventNumbers;
+      long long endEventNumbers;
+      EntryNumber_t beginEventEntry;
+      EntryNumber_t endEventEntry;
+      runOrLumi.getRange(beginEventNumbers, endEventNumbers, beginEventEntry, endEventEntry);
+
+      if (beginEventNumbers != previousBeginEventNumbers) offset = 0;
+
+      for (EntryNumber_t entry = beginEventEntry; entry != endEventEntry; ++entry) {
+        eventTree_.setEntryNumber(entry);
+        fillThisEventAuxiliary();
+        indexIntoFile_.eventNumbers().at((entry - beginEventEntry) + offset + beginEventNumbers) = eventAux().event();
+      }
+      eventTree_.setEntryNumber(-1);
+
+      previousBeginEventNumbers = beginEventNumbers;
+      offset += endEventEntry - beginEventEntry;
+    }
+    indexIntoFile_.sortEvents();
+  }
+
+  void
+  RootFile::fillEventEntriesInIndex() {
+
+    indexIntoFile_.eventEntries().resize(eventTree_.entries());
+
+    long long offset = 0;
+    long long previousBeginEventNumbers = -1;
+
+    for (IndexIntoFile::SortedRunOrLumiItr runOrLumi = indexIntoFile_.beginRunOrLumi(),
+                                             endRunOrLumi = indexIntoFile_.endRunOrLumi();
+         runOrLumi != endRunOrLumi; ++runOrLumi) {
+
+      if (runOrLumi.isRun()) continue;
+
+      long long beginEventNumbers;
+      long long endEventNumbers;
+      EntryNumber_t beginEventEntry;
+      EntryNumber_t endEventEntry;
+      runOrLumi.getRange(beginEventNumbers, endEventNumbers, beginEventEntry, endEventEntry);
+
+      // This is true each time one hits a new lumi section (except if the previous lumi had
+      // no events, in which case the offset is still 0 anyway)
+      if (beginEventNumbers != previousBeginEventNumbers) offset = 0;
+
+      for (EntryNumber_t entry = beginEventEntry; entry != endEventEntry; ++entry) {
+        eventTree_.setEntryNumber(entry);
+        fillThisEventAuxiliary();
+        indexIntoFile_.eventEntries().at((entry - beginEventEntry) + offset + beginEventNumbers) =
+          IndexIntoFile::EventEntry(eventAux().event(), entry);
+      }
+      eventTree_.setEntryNumber(-1);
+
+      previousBeginEventNumbers = beginEventNumbers;
+      offset += endEventEntry - beginEventEntry;
+    }
+    indexIntoFile_.sortEventEntries();
   }
 
   void
@@ -827,9 +903,18 @@ namespace edm {
       throw edm::Exception(errors::EventCorruption) <<
 	 "'Events' tree is corrupted or not present\n" << "in the input file.\n";
     }
+
     if (indexIntoFile_.empty()) {
       fillIndexIntoFile();
     }
+
+    indexIntoFile_.fixIndexes(orderedProcessHistoryIDs_);
+
+    // For now always fill these. This needs to be improved
+    // to only fill these parts of the index when required
+    indexIntoFile_.fillRunOrLumiIndexes();
+    fillEventNumbersInIndex();
+    fillEventEntriesInIndex();    
   }
 
   void
@@ -886,7 +971,7 @@ namespace edm {
 
   void
   RootFile::fillEventAuxiliary() {
-    eventTree_.setEntryNumber(indexIntoFileIter_->entry());
+    eventTree_.setEntryNumber(indexIntoFileIter_.entry());
     fillThisEventAuxiliary();
   }
 
@@ -974,20 +1059,35 @@ namespace edm {
 
   bool
   RootFile::skipEvents(int& offset) {
-    for(;offset > 0 && indexIntoFileIter_ != indexIntoFileEnd_; ++indexIntoFileIter_) {
-      if(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
-        if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
-	  fillEventAuxiliary();
-	  if (eventSkipperByID_->skipIt(indexIntoFileIter_->run(), indexIntoFileIter_->lumi(), eventAux_.id().event())) {
+    while (offset > 0 && indexIntoFileIter_ != indexIntoFileEnd_) {
+
+      RunNumber_t runOfSkippedEvent = IndexIntoFile::invalidRun;
+      LuminosityBlockNumber_t lumiOfSkippedEvent = IndexIntoFile::invalidLumi;
+      IndexIntoFile::EntryNumber_t skippedEventEntry = IndexIntoFile::invalidEntry;
+
+      indexIntoFileIter_.skipEventForward(runOfSkippedEvent,
+                                          lumiOfSkippedEvent,
+                                          skippedEventEntry);
+
+      // At the end of the file and there were no more events to skip
+      if (skippedEventEntry == IndexIntoFile::invalidEntry) break;
+
+      if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
+        eventTree_.setEntryNumber(skippedEventEntry);
+        fillThisEventAuxiliary();
+	if (eventSkipperByID_->skipIt(runOfSkippedEvent, lumiOfSkippedEvent, eventAux_.id().event())) {
 	    continue;
-          }
         }
-	if(isDuplicateEvent()) {
-	  continue;
-	}
-        --offset;
       }
+      // if(duplicateChecker_->isDuplicateAndCheckActive(indexIntoFileIter_.processHistoryIDIndex(),
+      //	                      EventID(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), eventAux_.id().event()), file_);
+      // ) {
+      //  continue;
+      // }
+      --offset;
     }
+
+    /*
     while(offset < 0 && indexIntoFileIter_ != indexIntoFileBegin_) {
       --indexIntoFileIter_;
       if(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent) {
@@ -997,16 +1097,13 @@ namespace edm {
 	    continue;
           }
         }
-	if(isDuplicateEvent()) {
-	  continue;
-	}
+	// if(isDuplicateEvent()) {
+	//  continue;
+	// }
         ++offset;
       }
     }
-    while(indexIntoFileIter_ != indexIntoFileEnd_ && indexIntoFileIter_->getEntryType() != IndexIntoFile::kEvent) {
-      ++indexIntoFileIter_;
-    }
-
+    */
     eventTree_.resetTraining();
 
     return (indexIntoFileIter_ == indexIntoFileEnd_);
@@ -1028,29 +1125,23 @@ namespace edm {
   EventPrincipal*
   RootFile::readEvent(EventPrincipal& cache, boost::shared_ptr<LuminosityBlockPrincipal> lb) {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
-    assert(indexIntoFileIter_->getEntryType() == IndexIntoFile::kEvent);
+    assert(indexIntoFileIter_.getEntryType() == IndexIntoFile::kEvent);
     // Set the entry in the tree, and read the event at that entry.
-    eventTree_.setEntryNumber(indexIntoFileIter_->entry()); 
+    eventTree_.setEntryNumber(indexIntoFileIter_.entry()); 
     EventPrincipal* ep = readCurrentEvent(cache, lb);
 
     assert(ep != 0);
-    assert(eventAux().run() == indexIntoFileIter_->run() + forcedRunOffset_);
-    assert(eventAux().luminosityBlock() == indexIntoFileIter_->lumi());
+    assert(eventAux().run() == indexIntoFileIter_.run() + forcedRunOffset_);
+    assert(eventAux().luminosityBlock() == indexIntoFileIter_.lumi());
 
     ++indexIntoFileIter_;
     return ep;
   }
 
-  EventNumber_t
-  RootFile::eventNumber() {
-    fillEventAuxiliary();
-    return eventAux_.id().event();
-  }
-
   // Reads event at the current entry in the file index.
   EventPrincipal*
   RootFile::readCurrentEvent(EventPrincipal& cache, boost::shared_ptr<LuminosityBlockPrincipal> lb) {
-    eventTree_.setEntryNumber(indexIntoFileIter_->entry());
+    eventTree_.setEntryNumber(indexIntoFileIter_.entry());
     if(!eventTree_.current()) {
       return 0;
     }
@@ -1085,7 +1176,7 @@ namespace edm {
   boost::shared_ptr<RunAuxiliary>
   RootFile::readRunAuxiliary_() {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
-    assert(indexIntoFileIter_->getEntryType() == IndexIntoFile::kRun);
+    assert(indexIntoFileIter_.getEntryType() == IndexIntoFile::kRun);
     // Begin code for backward compatibility before the existence of run trees.
     if(!runTree_.isValid()) {
       // prior to the support of run trees.
@@ -1095,14 +1186,14 @@ namespace edm {
         // back up, so event will not be skipped.
         eventTree_.previous();
       }
-      RunID run = RunID(indexIntoFileIter_->run());
+      RunID run = RunID(indexIntoFileIter_.run());
       overrideRunNumber(run);
       return boost::shared_ptr<RunAuxiliary>(new RunAuxiliary(run.run(), eventAux().time(), Timestamp::invalidTimestamp()));
     }
     // End code for backward compatibility before the existence of run trees.
-    runTree_.setEntryNumber(indexIntoFileIter_->entry()); 
+    runTree_.setEntryNumber(indexIntoFileIter_.entry()); 
     boost::shared_ptr<RunAuxiliary> runAuxiliary = fillRunAuxiliary();
-    assert(runAuxiliary->run() == indexIntoFileIter_->run());
+    assert(runAuxiliary->run() == indexIntoFileIter_.run());
     overrideRunNumber(runAuxiliary->id());
     Service<JobReport> reportSvc;
     reportSvc->reportInputRunNumber(runAuxiliary->run());
@@ -1116,7 +1207,7 @@ namespace edm {
       runAuxiliary->setBeginTime(eventAux().time()); 
       runAuxiliary->setEndTime(Timestamp::invalidTimestamp());
     }
-    ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+    ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_.processHistoryIDIndex());
     if(fileFormatVersion().processHistorySameWithinRun()) {
       assert(runAuxiliary->processHistoryID() == phid);
     } else {
@@ -1128,7 +1219,7 @@ namespace edm {
   boost::shared_ptr<RunPrincipal>
   RootFile::readRun_(boost::shared_ptr<RunPrincipal> rpCache) {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
-    assert(indexIntoFileIter_->getEntryType() == IndexIntoFile::kRun);
+    assert(indexIntoFileIter_.getEntryType() == IndexIntoFile::kRun);
     // Begin code for backward compatibility before the existence of run trees.
     if(!runTree_.isValid()) {
       ++indexIntoFileIter_;
@@ -1145,7 +1236,7 @@ namespace edm {
   boost::shared_ptr<LuminosityBlockAuxiliary>
   RootFile::readLuminosityBlockAuxiliary_() {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
-    assert(indexIntoFileIter_->getEntryType() == IndexIntoFile::kLumi);
+    assert(indexIntoFileIter_.getEntryType() == IndexIntoFile::kLumi);
     // Begin code for backward compatibility before the existence of lumi trees.
     if(!lumiTree_.isValid()) {
       if(eventTree_.next()) {
@@ -1154,15 +1245,15 @@ namespace edm {
         eventTree_.previous();
       }
 
-      LuminosityBlockID lumi = LuminosityBlockID(indexIntoFileIter_->run(), indexIntoFileIter_->lumi());
+      LuminosityBlockID lumi = LuminosityBlockID(indexIntoFileIter_.run(), indexIntoFileIter_.lumi());
       overrideRunNumber(lumi);
       return boost::shared_ptr<LuminosityBlockAuxiliary>(new LuminosityBlockAuxiliary(lumi.run(), lumi.luminosityBlock(), eventAux().time(), Timestamp::invalidTimestamp()));
     }
     // End code for backward compatibility before the existence of lumi trees.
-    lumiTree_.setEntryNumber(indexIntoFileIter_->entry()); 
+    lumiTree_.setEntryNumber(indexIntoFileIter_.entry()); 
     boost::shared_ptr<LuminosityBlockAuxiliary> lumiAuxiliary = fillLumiAuxiliary();
-    assert(lumiAuxiliary->run() == indexIntoFileIter_->run());
-    assert(lumiAuxiliary->luminosityBlock() == indexIntoFileIter_->lumi());
+    assert(lumiAuxiliary->run() == indexIntoFileIter_.run());
+    assert(lumiAuxiliary->luminosityBlock() == indexIntoFileIter_.lumi());
     overrideRunNumber(lumiAuxiliary->id());
     Service<JobReport> reportSvc;
     reportSvc->reportInputLumiSection(lumiAuxiliary->run(), lumiAuxiliary->luminosityBlock());
@@ -1178,10 +1269,10 @@ namespace edm {
       lumiAuxiliary->setEndTime(Timestamp::invalidTimestamp());
     }
     if(fileFormatVersion().processHistorySameWithinRun()) {
-      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_.processHistoryIDIndex());
       assert(lumiAuxiliary->processHistoryID() == phid);
     } else {
-      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_->processHistoryIDIndex());
+      ProcessHistoryID phid = indexIntoFile_.processHistoryID(indexIntoFileIter_.processHistoryIDIndex());
       lumiAuxiliary->setProcessHistoryID(phid);
     }
     return lumiAuxiliary;
@@ -1190,14 +1281,14 @@ namespace edm {
   boost::shared_ptr<LuminosityBlockPrincipal>
   RootFile::readLumi(boost::shared_ptr<LuminosityBlockPrincipal> lbCache) {
     assert(indexIntoFileIter_ != indexIntoFileEnd_);
-    assert(indexIntoFileIter_->getEntryType() == IndexIntoFile::kLumi);
+    assert(indexIntoFileIter_.getEntryType() == IndexIntoFile::kLumi);
     // Begin code for backward compatibility before the existence of lumi trees.
     if(!lumiTree_.isValid()) {
       ++indexIntoFileIter_;
       return lbCache;
     }
     // End code for backward compatibility before the existence of lumi trees.
-    lumiTree_.setEntryNumber(indexIntoFileIter_->entry()); 
+    lumiTree_.setEntryNumber(indexIntoFileIter_.entry()); 
     lbCache->fillLuminosityBlockPrincipal(makeBranchMapper(lumiTree_, InLumi),
 					 lumiTree_.makeDelayedReader(fileFormatVersion()));
     // Read in all the products now.
@@ -1210,15 +1301,7 @@ namespace edm {
   RootFile::setEntryAtEvent(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event) {
     indexIntoFileIter_ = indexIntoFile_.findEventPosition(run, lumi, event);
     if(indexIntoFileIter_ == indexIntoFileEnd_) return false;
-    eventTree_.setEntryNumber(indexIntoFileIter_->entry());
-    return true;
-  }
-
-  bool
-  RootFile::setEntryAtEventEntry(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event, IndexIntoFile::EntryNumber_t entry) {
-    indexIntoFileIter_ = indexIntoFile_.findEventEntryPosition(run, lumi, event, entry);
-    if(indexIntoFileIter_ == indexIntoFileEnd_) return false;
-    eventTree_.setEntryNumber(indexIntoFileIter_->entry());
+    eventTree_.setEntryNumber(indexIntoFileIter_.entry());
     return true;
   }
 
@@ -1226,7 +1309,7 @@ namespace edm {
   RootFile::setEntryAtLumi(RunNumber_t run, LuminosityBlockNumber_t lumi) {
     indexIntoFileIter_ = indexIntoFile_.findLumiPosition(run, lumi);
     if(indexIntoFileIter_ == indexIntoFileEnd_) return false;
-    lumiTree_.setEntryNumber(indexIntoFileIter_->entry());
+    lumiTree_.setEntryNumber(indexIntoFileIter_.entry());
     return true;
   }
 
@@ -1234,7 +1317,7 @@ namespace edm {
   RootFile::setEntryAtRun(RunNumber_t run) {
     indexIntoFileIter_ = indexIntoFile_.findRunPosition(run);
     if(indexIntoFileIter_ == indexIntoFileEnd_) return false;
-    runTree_.setEntryNumber(indexIntoFileIter_->entry());
+    runTree_.setEntryNumber(indexIntoFileIter_.entry());
     return true;
   }
 

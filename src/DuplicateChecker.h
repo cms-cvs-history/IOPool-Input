@@ -66,7 +66,7 @@ namespace edm {
     // the current file.  Plus it holds events that have been already
     // processed in the current file.  It is not used if there are
     // no duplicates or duplicate checking has been disabled.
-    std::set<IndexIntoFile::Element> relevantPreviousEvents_;
+    // std::set<IndexIntoFile::Element> relevantPreviousEvents_;
 
     bool itIsKnownTheFileHasNoDuplicates_;
   };

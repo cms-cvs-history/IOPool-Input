@@ -135,7 +135,7 @@ namespace edm {
   PoolSource::readRun_(boost::shared_ptr<RunPrincipal> rpCache) {
     if (secondaryFileSequence_ && !branchIDsToReplace_[InRun].empty()) {
       boost::shared_ptr<RunPrincipal> primaryPrincipal = primaryFileSequence_->readRun_(rpCache);
-      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), 0U, 0U, false);
+      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), 0U, 0U);
       if (found) {
         boost::shared_ptr<RunAuxiliary> secondaryAuxiliary = secondaryFileSequence_->readRunAuxiliary_();
         checkConsistency(primaryPrincipal->aux(), *secondaryAuxiliary);
@@ -157,7 +157,7 @@ namespace edm {
   PoolSource::readLuminosityBlock_(boost::shared_ptr<LuminosityBlockPrincipal> lbCache) {
     if (secondaryFileSequence_ && !branchIDsToReplace_[InLumi].empty()) {
       boost::shared_ptr<LuminosityBlockPrincipal> primaryPrincipal = primaryFileSequence_->readLuminosityBlock_(lbCache);
-      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), primaryPrincipal->luminosityBlock(), 0U, false);
+      bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(), primaryPrincipal->luminosityBlock(), 0U);
       if (found) {
         boost::shared_ptr<LuminosityBlockAuxiliary> secondaryAuxiliary = secondaryFileSequence_->readLuminosityBlockAuxiliary_();
         checkConsistency(primaryPrincipal->aux(), *secondaryAuxiliary);
@@ -183,8 +183,7 @@ namespace edm {
     if (secondaryFileSequence_ && !branchIDsToReplace_[InEvent].empty()) {
       bool found = secondaryFileSequence_->skipToItem(primaryPrincipal->run(),
 						      primaryPrincipal->luminosityBlock(),
-						      primaryPrincipal->id().event(),
-						      false);
+						      primaryPrincipal->id().event());
       if (found) {
         EventPrincipal* secondaryPrincipal = secondaryFileSequence_->readEvent(*secondaryEventPrincipal_, luminosityBlockPrincipal());
         checkConsistency(*primaryPrincipal, *secondaryPrincipal);
@@ -203,7 +202,7 @@ namespace edm {
 
   EventPrincipal*
   PoolSource::readIt(EventID const& id) {
-    bool found = primaryFileSequence_->skipToItem(id.run(), id.luminosityBlock(), id.event(), true);
+    bool found = primaryFileSequence_->skipToItem(id.run(), id.luminosityBlock(), id.event());
     if (!found) return 0;
     return readEvent_();
   }
@@ -211,8 +210,7 @@ namespace edm {
   InputSource::ItemType
   PoolSource::getNextItemType() {
     InputSource::ItemType returnValue = primaryFileSequence_->getNextItemType();
-    if(returnValue == InputSource::IsEvent && 
-       0 != numberOfEventsInBigSkip_ &&
+    if(0 != numberOfEventsInBigSkip_ &&
        0 == numberOfEventsBeforeBigSkip_) {
       primaryFileSequence_->skipEvents(numberOfEventsInBigSkip_, principalCache());
       numberOfEventsBeforeBigSkip_ = numberOfSequentialEvents_;
@@ -229,7 +227,6 @@ namespace edm {
   void
   PoolSource::postForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren, unsigned int iNumberOfSequentialEvents) {
     numberOfEventsInBigSkip_ = iNumberOfSequentialEvents * (iNumberOfChildren - 1);
-    numberOfEventsBeforeBigSkip_ = iNumberOfSequentialEvents;
     forkedChildIndex_ = iChildIndex;
     numberOfSequentialEvents_ = iNumberOfSequentialEvents;
     primaryFileSequence_->reset(principalCache());
@@ -242,13 +239,8 @@ namespace edm {
     primaryFileSequence_->rewind_();
     unsigned int numberToSkip = numberOfSequentialEvents_ * forkedChildIndex_;
     if(0 != numberToSkip) {
-      numberOfEventsBeforeBigSkip_ = numberOfSequentialEvents_;
-      if(numberOfEventsBeforeBigSkip_ < numberToSkip) {
-        numberOfEventsBeforeBigSkip_ = numberToSkip + 1;
-      }
       primaryFileSequence_->skipEvents(numberToSkip, principalCache());
     }
-    //numberOfEventsBeforeBigSkip_ = numberOfSequentialEvents_ + 1;
     numberOfEventsBeforeBigSkip_ = numberOfSequentialEvents_;
   }
 

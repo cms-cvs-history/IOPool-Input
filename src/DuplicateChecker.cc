@@ -11,6 +11,7 @@
 
 namespace edm {
 
+/*
 namespace {
   struct IsDupAnEvent {
     bool operator()(IndexIntoFile::Element const& e) {
@@ -21,6 +22,7 @@ namespace {
     }
   };
 }
+*/
 
   DuplicateChecker::DuplicateChecker(ParameterSet const& pset) :
     dataType_(unknown),
@@ -53,7 +55,7 @@ namespace {
       IndexIntoFile const& indexIntoFile,
       std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
       std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentIndexIntoFile) {
-
+    /*
     if (duplicateCheckMode_ == noDuplicateCheck) return;
 
     dataType_ = realData ? isRealData : isSimulation;
@@ -86,27 +88,34 @@ namespace {
         itIsKnownTheFileHasNoDuplicates_ = true;
       }
     }
+    */
   }
 
   void DuplicateChecker::inputFileClosed()
   {
+    /*
     dataType_ = unknown;
     relevantPreviousEvents_.clear();
     itIsKnownTheFileHasNoDuplicates_ = false;
+    */
   }
 
   bool DuplicateChecker::fastCloningOK() const
   {
+    return true;
+    /*
     return 
       itIsKnownTheFileHasNoDuplicates_ ||
       duplicateCheckMode_ == noDuplicateCheck ||
       (duplicateCheckMode_ == checkEachRealDataFile && dataType_ == isSimulation);
+    */
   }
 
   bool DuplicateChecker::isDuplicateAndCheckActive(int index,
                                                    EventID const& eventID,
                                                    std::string const& fileName)
   {
+    /*
     if (itIsKnownTheFileHasNoDuplicates_) return false;
     if (duplicateCheckMode_ == noDuplicateCheck) return false;
     if (duplicateCheckMode_ == checkEachRealDataFile) {
@@ -137,6 +146,7 @@ namespace {
       }
       return true;
     }
+    */
     return false;
   }
 
