@@ -53,7 +53,7 @@ namespace edm {
 
   class RootFile : private boost::noncopyable {
   public:
-    typedef boost::array<RootTree *, NumBranchTypes> RootTreePtrArray;
+    typedef boost::array<RootTree*, NumBranchTypes> RootTreePtrArray;
     RootFile(std::string const& fileName,
 	     ProcessConfiguration const& processConfiguration,
 	     std::string const& logicalFileName,
@@ -73,7 +73,7 @@ namespace edm {
              bool dropDescendantsOfDroppedProducts,
              std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
              std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentIndexIntoFile,
-             std::vector<ProcessHistoryID> & orderedProcessHistoryIDs);
+             std::vector<ProcessHistoryID>& orderedProcessHistoryIDs);
     ~RootFile();
     void reportOpened(std::string const& inputType);
     void close(bool reallyClose);
@@ -96,7 +96,7 @@ namespace edm {
     EventID const& eventID() const {return eventAux().id();}
     RootTree const& eventTree() const {return eventTree_;}
     RootTree const& lumiTree() const {return lumiTree_;}
-    RootTree const & runTree() const {return runTree_;}
+    RootTree const& runTree() const {return runTree_;}
     FileFormatVersion fileFormatVersion() const {return fileFormatVersion_;}
     int whyNotFastClonable() const {return whyNotFastClonable_;}
     boost::shared_ptr<FileBlock> createFileBlock() const;
@@ -125,7 +125,7 @@ namespace edm {
       return indexIntoFileSharedPtr_;
     }
   private:
-    RootTreePtrArray & treePointers() {return treePointers_;}
+    RootTreePtrArray& treePointers() {return treePointers_;}
     bool skipThisEntry();
     IndexIntoFile::EntryType getEntryTypeWithSkipping();
     IndexIntoFile::IndexIntoFileItr indexIntoFileIter() const;
@@ -152,7 +152,7 @@ namespace edm {
     void initializeDuplicateChecker(std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
                                     std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentIndexIntoFile);
 
-    boost::shared_ptr<BranchMapper> makeBranchMapper(RootTree & rootTree, BranchType const& type) const;
+    boost::shared_ptr<BranchMapper> makeBranchMapper(RootTree& rootTree, BranchType const& type) const;
 
     std::string const file_;
     std::string const logicalFile_;
@@ -162,8 +162,8 @@ namespace edm {
     FileFormatVersion fileFormatVersion_;
     FileID fid_;
     boost::shared_ptr<IndexIntoFile> indexIntoFileSharedPtr_;
-    IndexIntoFile & indexIntoFile_;
-    std::vector<ProcessHistoryID> & orderedProcessHistoryIDs_;
+    IndexIntoFile& indexIntoFile_;
+    std::vector<ProcessHistoryID>& orderedProcessHistoryIDs_;
     IndexIntoFile::IndexIntoFileItr indexIntoFileBegin_;
     IndexIntoFile::IndexIntoFileItr indexIntoFileEnd_;
     IndexIntoFile::IndexIntoFileItr indexIntoFileIter_;
@@ -184,8 +184,8 @@ namespace edm {
     InputSource::ProcessingMode processingMode_;
     int forcedRunOffset_;
     std::map<std::string, std::string> newBranchToOldBranch_;
-    TTree * eventHistoryTree_;
-    boost::shared_ptr<History> history_;    
+    TTree* eventHistoryTree_;
+    boost::shared_ptr<History> history_;
     boost::shared_ptr<BranchChildren> branchChildren_;
     boost::shared_ptr<DuplicateChecker> duplicateChecker_;
     boost::shared_ptr<ProvenanceAdaptor> provenanceAdaptor_;
