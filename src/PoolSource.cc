@@ -209,14 +209,12 @@ namespace edm {
 
   InputSource::ItemType
   PoolSource::getNextItemType() {
-    InputSource::ItemType returnValue = primaryFileSequence_->getNextItemType();
     if(0 != numberOfEventsInBigSkip_ &&
        0 == numberOfEventsBeforeBigSkip_) {
       primaryFileSequence_->skipEvents(numberOfEventsInBigSkip_, principalCache());
       numberOfEventsBeforeBigSkip_ = numberOfSequentialEvents_;
-      returnValue = primaryFileSequence_->getNextItemType();
     }
-    return returnValue;
+    return primaryFileSequence_->getNextItemType();;
   }
 
   void

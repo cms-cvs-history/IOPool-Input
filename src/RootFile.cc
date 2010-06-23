@@ -463,10 +463,10 @@ namespace edm {
     // if(forcedRunOffset_ != 0) { 
     //   whyNotFastClonable_ += FileBlock::RunNumberModified;
     // }
-    if(duplicateChecker_.get() != 0) {
-      if(!duplicateChecker_->fastCloningOK()) {
-        whyNotFastClonable_ += FileBlock::DuplicateEventsRemoved;
-      }
+    if(duplicateChecker_ &&
+      !duplicateChecker_->checkDisabled() &&
+      !duplicateChecker_->noDuplicatesInFile()) {
+      whyNotFastClonable_ += FileBlock::DuplicateEventsRemoved;
     }
   }
 
@@ -504,22 +504,6 @@ namespace edm {
     if(indexIntoFileIter_ == indexIntoFileEnd_) {
         return false;
     }
-    /* I think we should deal with this when filling the IndexIntoFile
-    if(!fileFormatVersion().processHistorySameWithinRun()) {
-	// This exists for backward compatibility to very old format
-	// files where there were duplicate run or lumi entries
-	// within a file and they should not be merged.  (Actually
-	// much older than the fileFormatVersion check would seem to
-	// to indicate, because immediately before that version there
-	// could only be one entry in a file per run number or per
-	// lumi number.)
-      if(indexIntoFileIter_->getEntryType() != IndexIntoFile::kEvent && indexIntoFileIter_ != indexIntoFileBegin_) {
-        if((indexIntoFileIter_-1)->run() == indexIntoFileIter_->run() && (indexIntoFileIter_-1)->lumi() == indexIntoFileIter_->lumi()) {
-	  return true;
-        } 
-      }
-    }
-    */
     if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
       // See first if the entire lumi is skipped, so we won't have to read the event Auxiliary in that case.
       bool skipTheLumi = eventSkipperByID_->skipIt(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), 0U);
@@ -556,7 +540,7 @@ namespace edm {
     }
     fillEventAuxiliary();
     return duplicateChecker_->isDuplicateAndCheckActive(indexIntoFileIter_.processHistoryIDIndex(),
-	EventID(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), eventAux_.id().event()), file_);
+	indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), eventAux_.id().event(), file_);
   }
 
   IndexIntoFile::EntryType
@@ -1061,11 +1045,13 @@ namespace edm {
   RootFile::skipEvents(int& offset) {
     while (offset > 0 && indexIntoFileIter_ != indexIntoFileEnd_) {
 
+      int phIndexOfSkippedEvent = IndexIntoFile::invalidIndex;
       RunNumber_t runOfSkippedEvent = IndexIntoFile::invalidRun;
       LuminosityBlockNumber_t lumiOfSkippedEvent = IndexIntoFile::invalidLumi;
       IndexIntoFile::EntryNumber_t skippedEventEntry = IndexIntoFile::invalidEntry;
 
-      indexIntoFileIter_.skipEventForward(runOfSkippedEvent,
+      indexIntoFileIter_.skipEventForward(phIndexOfSkippedEvent,
+                                          runOfSkippedEvent,
                                           lumiOfSkippedEvent,
                                           skippedEventEntry);
 
@@ -1079,11 +1065,20 @@ namespace edm {
 	    continue;
         }
       }
-      // if(duplicateChecker_->isDuplicateAndCheckActive(indexIntoFileIter_.processHistoryIDIndex(),
-      //	                      EventID(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), eventAux_.id().event()), file_);
-      // ) {
-      //  continue;
-      // }
+      if(duplicateChecker_ &&
+         !duplicateChecker_->checkDisabled() &&
+         !duplicateChecker_->noDuplicatesInFile()) {
+
+        eventTree_.setEntryNumber(skippedEventEntry);
+        fillThisEventAuxiliary();
+        if (duplicateChecker_->isDuplicateAndCheckActive(phIndexOfSkippedEvent,
+                                                         runOfSkippedEvent,
+                                                         lumiOfSkippedEvent,
+                                                         eventAux_.id().event(),
+                                                         file_)) {
+          continue;
+        }
+      }
       --offset;
     }
 
@@ -1368,7 +1363,7 @@ namespace edm {
   RootFile::initializeDuplicateChecker(
     std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
     std::vector<boost::shared_ptr<IndexIntoFile> >::size_type currentIndexIntoFile) {
-    if(duplicateChecker_.get() != 0) {
+    if(duplicateChecker_) {
       if(eventTree_.next()) {
         fillThisEventAuxiliary();
         duplicateChecker_->inputFileOpened(eventAux().isRealData(),

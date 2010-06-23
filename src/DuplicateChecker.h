@@ -7,15 +7,16 @@
 IOPool/Input/src/DuplicateChecker.h
 
 Used by PoolSource to detect events with
-the same run, lumi, and event number.  It is configurable
-whether it checks for duplicates within the scope
-of each single input file or all input files or
-not at all.
+the same process history, run, lumi, and event number.
+It is configurable whether it checks for duplicates
+within the scope of each single input file or all input
+files or does not check for duplicates at all.
 
 ----------------------------------------------------------------------*/
 
 #include "DataFormats/Provenance/interface/EventID.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
+#include "DataFormats/Provenance/interface/RunID.h"
 #include "DataFormats/Provenance/interface/IndexIntoFile.h"
 
 #include "boost/shared_ptr.hpp"
@@ -43,10 +44,17 @@ namespace edm {
 
     void inputFileClosed();
 
-    bool fastCloningOK() const;
+    bool noDuplicatesInFile() const { return itIsKnownTheFileHasNoDuplicates_; }
+
+    bool checkDisabled() const {
+      return duplicateCheckMode_ == noDuplicateCheck ||
+	(duplicateCheckMode_ == checkEachRealDataFile && dataType_ == isSimulation);
+    }
 
     bool isDuplicateAndCheckActive(int index,
-                                   EventID const& eventID,
+                                   RunNumber_t run,
+                                   LuminosityBlockNumber_t lumi,
+                                   EventNumber_t event,
                                    std::string const& fileName);
 
     static void fillDescription(ParameterSetDescription & desc);
@@ -66,7 +74,7 @@ namespace edm {
     // the current file.  Plus it holds events that have been already
     // processed in the current file.  It is not used if there are
     // no duplicates or duplicate checking has been disabled.
-    // std::set<IndexIntoFile::Element> relevantPreviousEvents_;
+    std::set<IndexIntoFile::IndexRunLumiEventKey> relevantPreviousEvents_;
 
     bool itIsKnownTheFileHasNoDuplicates_;
   };
