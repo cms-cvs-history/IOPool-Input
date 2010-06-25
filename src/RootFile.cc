@@ -101,7 +101,7 @@ namespace edm {
       indexIntoFileSharedPtr_(new IndexIntoFile),
       indexIntoFile_(*indexIntoFileSharedPtr_),
       orderedProcessHistoryIDs_(orderedProcessHistoryIDs),
-      indexIntoFileBegin_(indexIntoFile_.begin(!noEventSort)),
+      indexIntoFileBegin_(indexIntoFile_.begin(noEventSort ? IndexIntoFile::firstAppearanceOrder : IndexIntoFile::numericalOrder)),
       indexIntoFileEnd_(indexIntoFileBegin_),
       indexIntoFileIter_(indexIntoFileBegin_),
       eventProcessHistoryIDs_(),
@@ -294,8 +294,8 @@ namespace edm {
     }
 
     initializeDuplicateChecker(indexesIntoFiles, currentIndexIntoFile);
-    indexIntoFileIter_ = indexIntoFileBegin_ = indexIntoFile_.begin(!noEventSort);
-    indexIntoFileEnd_ = indexIntoFile_.end(!noEventSort);
+    indexIntoFileIter_ = indexIntoFileBegin_ = indexIntoFile_.begin(noEventSort ? IndexIntoFile::firstAppearanceOrder : IndexIntoFile::numericalOrder);
+    indexIntoFileEnd_ = indexIntoFile_.end(noEventSort ? IndexIntoFile::firstAppearanceOrder : IndexIntoFile::numericalOrder);
     forcedRunOffset_ = forcedRunOffset(forcedRunNumber, indexIntoFileBegin_, indexIntoFileEnd_);
     eventProcessHistoryIter_ = eventProcessHistoryIDs_.begin();
 
@@ -442,7 +442,9 @@ namespace edm {
     }
 
     // From here on, record all reasons we can't fast clone.
-    if(!indexIntoFile_.allEventsInEntryOrder(!noEventSort_)) {
+    IndexIntoFile::SortOrder sortOrder = IndexIntoFile::numericalOrder;
+    if (noEventSort_) sortOrder = IndexIntoFile::firstAppearanceOrder;
+    if(!indexIntoFile_.iterationWillBeInEntryOrder(sortOrder)) {
       whyNotFastClonable_ += FileBlock::EventsToBeSorted;
     }
     if(skipAnyEvents_) {
