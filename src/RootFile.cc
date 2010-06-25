@@ -766,9 +766,9 @@ namespace edm {
     // Also fill in the vector of process history IDs
     typedef std::map<RunItem, int, RunItemSortByRunPhid> RunCountMap;
     RunCountMap runCountMap; // Declare (17)
-    std::vector<ProcessHistoryID>& phids = indexIntoFile_.processHistoryIDs_;
+    std::vector<ProcessHistoryID>& phids = indexIntoFile_.setProcessHistoryIDs();
     assert(phids.empty());
-    std::vector<IndexIntoFile::RunOrLumiEntry>& entries = indexIntoFile_.runOrLumiEntries_;
+    std::vector<IndexIntoFile::RunOrLumiEntry>& entries = indexIntoFile_.setRunOrLumiEntries();
     assert(entries.empty());
     int rcount = 0;
     for (RunList::iterator it = runs.begin(), itEnd = runs.end(); it != itEnd; ++it) {
