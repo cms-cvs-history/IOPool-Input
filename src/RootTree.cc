@@ -5,7 +5,7 @@
 #include "FWCore/Utilities/interface/Exception.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "DataFormats/Provenance/interface/ConstBranchDescription.h"
-#include "TFile.h"
+#include "InputFile.h"
 #include "TTree.h"
 #include "TTreeIndex.h"
 #include "TTreeCache.h"
@@ -30,7 +30,7 @@ namespace edm {
       return branch; // backward compatibility
     } // backward compatibility
   }
-  RootTree::RootTree(boost::shared_ptr<TFile> filePtr,
+  RootTree::RootTree(boost::shared_ptr<InputFile> filePtr,
                      BranchType const& branchType,
                      unsigned int maxVirtualSize,
                      unsigned int cacheSize,
@@ -166,8 +166,8 @@ namespace edm {
 
   void
   RootTree::close () {
-    // The TFile is about to be closed, and destructed.
-    // Just to play it safe, zero all pointers to quantities that are owned by the TFile.
+    // The InputFile is about to be closed, and destructed.
+    // Just to play it safe, zero all pointers to quantities that are owned by the InputFile.
     auxBranch_  = branchEntryInfoBranch_ = statusBranch_ = 0;
     tree_ = metaTree_ = infoTree_ = 0;
     // We own the treeCache_.
@@ -175,7 +175,7 @@ namespace edm {
     // so that ROOT does not also delete it.
     filePtr_->SetCacheRead(0);
     trained_ = kFALSE;
-    // We give up our shared ownership of the TFile itself.
+    // We give up our shared ownership of the InputFile itself.
     filePtr_.reset();
   }
 
@@ -205,7 +205,7 @@ namespace edm {
     }
 
     Int_t
-    getEntryWithCache(TBranch* branch, EntryNumber entryNumber, TTreeCache* tc, TFile* filePtr) {
+    getEntryWithCache(TBranch* branch, EntryNumber entryNumber, TTreeCache* tc, InputFile* filePtr) {
       if (tc == 0) {
         return getEntry(branch, entryNumber);
       }
@@ -216,7 +216,7 @@ namespace edm {
     }
 
     Int_t
-    getEntryWithCache(TTree* tree, EntryNumber entryNumber, TTreeCache* tc, TFile* filePtr) {
+    getEntryWithCache(TTree* tree, EntryNumber entryNumber, TTreeCache* tc, InputFile* filePtr) {
       if (tc == 0) {
         return getEntry(tree, entryNumber);
       }
