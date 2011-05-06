@@ -130,7 +130,6 @@ namespace edm {
     // close the currently open file, if any, and delete the RootFile object.
     if(rootFile_) {
       if (primary()) {
-        assert(rootFile_.unique());
         std::auto_ptr<InputSource::FileCloseSentry>
         sentry((primaryFiles_) ? new InputSource::FileCloseSentry(input_) : 0);
         rootFile_->close();
