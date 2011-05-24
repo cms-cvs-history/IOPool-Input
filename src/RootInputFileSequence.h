@@ -59,10 +59,10 @@ namespace edm {
     bool skipToItem(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event);
     void rewind_();
     void reset(PrincipalCache& cache);
-    void readMany(int number, EventPrincipalVector& result);
-    void readManyRandom(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber);
-    void readManySequential(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber);
-    void readManySpecified(std::vector<EventID> const& events, EventPrincipalVector& result); 
+    std::auto_ptr<EventPrincipal> readOneRandom();
+    std::auto_ptr<EventPrincipal> readOneSequential();
+    std::auto_ptr<EventPrincipal> readOneSpecified(EventID const& event);
+
     void dropUnwantedBranches_(std::vector<std::string> const& wantedBranches);
     boost::shared_ptr<ProductRegistry const> fileProductRegistry() const;
     static void fillDescription(ParameterSetDescription & desc);

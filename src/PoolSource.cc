@@ -263,33 +263,27 @@ namespace edm {
     return primaryFileSequence_->goToEvent(eventID);
   }
 
-  void
-  PoolSource::readMany_(int number, EventPrincipalVector& result) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readMany(number, result);
+  std::auto_ptr<EventPrincipal>
+  PoolSource::readOneRandom() {
+    assert(!secondaryFileSequence_);
+    return primaryFileSequence_->readOneRandom();
   }
 
-  void
-  PoolSource::readManyRandom_(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readManyRandom(number, result, fileSeqNumber);
+  std::auto_ptr<EventPrincipal>
+  PoolSource::readOneSequential() {
+    assert(!secondaryFileSequence_);
+    return primaryFileSequence_->readOneSequential();
   }
 
-  void
-  PoolSource::readManySequential_(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readManySequential(number, result, fileSeqNumber);
-  }
-
-  void
-  PoolSource::readManySpecified_(std::vector<EventID> const& events, EventPrincipalVector& result) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readManySpecified(events, result);
+  std::auto_ptr<EventPrincipal>
+  PoolSource::readOneSpecified(EventID const& event) {
+    assert(!secondaryFileSequence_);
+    return primaryFileSequence_->readOneSpecified(event);
   }
 
   void
   PoolSource::dropUnwantedBranches_(std::vector<std::string> const& wantedBranches) {
-    assert (!secondaryFileSequence_);
+    assert(!secondaryFileSequence_);
     primaryFileSequence_->dropUnwantedBranches_(wantedBranches);
   }
 
