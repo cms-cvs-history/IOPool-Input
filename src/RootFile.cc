@@ -155,7 +155,9 @@ namespace edm {
       history_(),
       branchChildren_(new BranchChildren),
       duplicateChecker_(duplicateChecker),
-      provenanceAdaptor_() {
+      provenanceAdaptor_(),
+      secondaryEventPrincipal_(),
+      eventBranchMapper_() {
 
     hasNewlyDroppedBranch_.assign(false);
 
@@ -383,6 +385,11 @@ namespace edm {
       BranchDescription const& prod = it->second;
       treePointers_[prod.branchType()]->addBranch(it->first, prod,
                                                   newBranchToOldBranch(prod.branchName()));
+    }
+
+    // Event Principal cache for secondary input source
+    if(inputType == InputType::SecondarySource) {
+      secondaryEventPrincipal_.reset(new EventPrincipal(productRegistry(), processConfiguration));
     }
 
     // Determine if this file is fast clonable.

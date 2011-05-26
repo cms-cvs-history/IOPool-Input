@@ -48,9 +48,9 @@ namespace edm {
     virtual void skip(int offset);
     virtual bool goToEvent_(EventID const& eventID);
     virtual void rewind_();
-    virtual std::auto_ptr<EventPrincipal> readOneRandom();
-    virtual std::auto_ptr<EventPrincipal> readOneSequential();
-    virtual std::auto_ptr<EventPrincipal> readOneSpecified(EventID const& event);
+    virtual EventPrincipal* readOneRandom();
+    virtual EventPrincipal* readOneSequential();
+    virtual EventPrincipal* readOneSpecified(EventID const& id);
     virtual void dropUnwantedBranches_(std::vector<std::string> const& wantedBranches);
     virtual void preForkReleaseResources();
     virtual void postForkReacquireResources(boost::shared_ptr<edm::multicore::MessageReceiverForSource>);

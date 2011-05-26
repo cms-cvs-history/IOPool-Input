@@ -263,22 +263,24 @@ namespace edm {
     return primaryFileSequence_->goToEvent(eventID);
   }
 
-  std::auto_ptr<EventPrincipal>
+  EventPrincipal*
   PoolSource::readOneRandom() {
     assert(!secondaryFileSequence_);
     return primaryFileSequence_->readOneRandom();
   }
 
-  std::auto_ptr<EventPrincipal>
+  EventPrincipal*
   PoolSource::readOneSequential() {
     assert(!secondaryFileSequence_);
     return primaryFileSequence_->readOneSequential();
   }
 
-  std::auto_ptr<EventPrincipal>
-  PoolSource::readOneSpecified(EventID const& event) {
+  EventPrincipal*
+  PoolSource::readOneSpecified(EventID const& id) {
     assert(!secondaryFileSequence_);
-    return primaryFileSequence_->readOneSpecified(event);
+    bool found = primaryFileSequence_->skipToItem(id.run(), id.luminosityBlock(), id.event());
+    if(!found) return 0;
+    return primaryFileSequence_->readOneSequential();
   }
 
   void

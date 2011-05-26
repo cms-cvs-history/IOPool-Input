@@ -573,7 +573,33 @@ namespace edm {
     groupSelectorRules_ = GroupSelectorRules(pset, "inputCommands", "InputSource");
   }
 
-  std::auto_ptr<EventPrincipal>
+  EventPrincipal*
+  RootInputFileSequence::readOneSequential() {
+    skipBadFiles_ = false;
+    if(fileIter_ == fileIterEnd_ || !rootFile_) {
+      if(fileIterEnd_ == fileIterBegin_) {
+        throw Exception(errors::Configuration) << "RootInputFileSequence::readOneSequential(): no input files specified.\n";
+      }
+      fileIter_ = fileIterBegin_;
+      initFile(false);
+      rootFile_->setAtEventEntry(0);
+    }
+    EventPrincipal* ep = rootFile_->readCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+    if(ep == 0) {
+      ++fileIter_;
+      if(fileIter_ == fileIterEnd_) {
+        return 0;
+      }
+      initFile(false);
+      rootFile_->setAtEventEntry(0);
+      return readOneSequential();
+    }
+    rootFile_->nextEventEntry();
+    return ep;
+  }
+
+
+  EventPrincipal*
   RootInputFileSequence::readOneRandom() {
     if(fileIterEnd_ == fileIterBegin_) {
       throw Exception(errors::Configuration) << "RootInputFileSequence::readOneRandom(): no input files specified.\n";
@@ -600,66 +626,14 @@ namespace edm {
       rootFile_->setAtEventEntry(flatDistribution_->fireInt(eventsRemainingInFile_));
     }
 
-    std::auto_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-    EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-    if(ev == 0) {
+    EventPrincipal* ep = rootFile_->readCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+    if(ep == 0) {
       rewindFile();
-      ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-      assert(ev != 0);
+      ep = rootFile_->readCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+      assert(ep != 0);
     }
-    assert(ev == ep.get());
     --eventsRemainingInFile_;
     rootFile_->nextEventEntry();
-    return ep;
-  }
-
-  std::auto_ptr<EventPrincipal>
-  RootInputFileSequence::readOneSequential() {
-    skipBadFiles_ = false;
-    if(fileIter_ == fileIterEnd_ || !rootFile_) {
-      if(fileIterEnd_ == fileIterBegin_) {
-        throw Exception(errors::Configuration) << "RootInputFileSequence::readOneSequential(): no input files specified.\n";
-      }
-      fileIter_ = fileIterBegin_;
-      initFile(false);
-      rootFile_->setAtEventEntry(0);
-    }
-    std::auto_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-    EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-    if(ev == 0) {
-      ++fileIter_;
-      if(fileIter_ == fileIterEnd_) {
-        assert(ev == ep.get());
-        return ep;
-      }
-      initFile(false);
-      rootFile_->setAtEventEntry(0);
-      return readOneSequential();
-    }
-    assert(ev == ep.get());
-    rootFile_->nextEventEntry();
-    return ep;
-  }
-
-  std::auto_ptr<EventPrincipal>
-  RootInputFileSequence::readOneSpecified(EventID const& event) {
-    skipBadFiles_ = false;
-    bool found = skipToItem(event.run(), event.luminosityBlock(), event.event());
-    if(!found) {
-      throw Exception(errors::NotFound) <<
-         "RootInputFileSequence::readOneSpecified(): Secondary Input file " <<
-         fileIter_->fileName() <<
-         " does not contain specified event:\n" << event << "\n";
-    }
-    std::auto_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-    EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-    if(ev == 0) {
-      throw Exception(errors::EventCorruption) <<
-         "RootInputFileSequence::readOneSpecified(): Secondary Input file " <<
-         fileIter_->fileName() <<
-         " contains specified event " << event << " that cannot be read.\n";
-    }
-    assert(ev == ep.get());
     return ep;
   }
 
