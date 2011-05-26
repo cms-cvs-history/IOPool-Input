@@ -61,6 +61,7 @@ namespace edm {
     void reset(PrincipalCache& cache);
     EventPrincipal* readOneRandom();
     EventPrincipal* readOneSequential();
+    EventPrincipal* readOneSpecified(EventID const& id);
 
     void dropUnwantedBranches_(std::vector<std::string> const& wantedBranches);
     boost::shared_ptr<ProductRegistry const> fileProductRegistry() const;

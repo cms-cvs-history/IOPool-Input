@@ -278,9 +278,7 @@ namespace edm {
   EventPrincipal*
   PoolSource::readOneSpecified(EventID const& id) {
     assert(!secondaryFileSequence_);
-    bool found = primaryFileSequence_->skipToItem(id.run(), id.luminosityBlock(), id.event());
-    if(!found) return 0;
-    return primaryFileSequence_->readOneSequential();
+    return primaryFileSequence_->readOneSpecified(id);
   }
 
   void

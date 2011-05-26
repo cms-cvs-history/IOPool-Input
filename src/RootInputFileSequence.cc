@@ -598,6 +598,20 @@ namespace edm {
     return ep;
   }
 
+  EventPrincipal*
+  RootInputFileSequence::readOneSpecified(EventID const& id) {
+    skipBadFiles_ = false;
+    bool found = skipToItem(id.run(), id.luminosityBlock(), id.event());
+    if(!found) {
+      throw Exception(errors::NotFound) <<
+         "RootInputFileSequence::readOneSpecified(): Secondary Input file " <<
+         fileIter_->fileName() <<
+         " does not contain specified event:\n" << id << "\n";
+    }
+    EventPrincipal* ep = rootFile_->readCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+    assert(ep != 0);
+    return ep;
+  }
 
   EventPrincipal*
   RootInputFileSequence::readOneRandom() {
