@@ -43,7 +43,6 @@ namespace edm {
     explicit RootInputFileSequence(ParameterSet const& pset, PoolSource const& input, InputFileCatalog const& catalog, PrincipalCache& cache, InputType::InputType inputType);
     virtual ~RootInputFileSequence();
 
-    typedef VectorInputSource::EventPrincipalVector EventPrincipalVector;
     typedef boost::shared_ptr<RootFile> RootFileSharedPtr;
     EventPrincipal* readEvent(EventPrincipal& cache, boost::shared_ptr<LuminosityBlockPrincipal> lb);
     boost::shared_ptr<LuminosityBlockAuxiliary> readLuminosityBlockAuxiliary_();
