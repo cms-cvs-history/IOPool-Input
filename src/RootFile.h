@@ -198,6 +198,7 @@ namespace edm {
     boost::scoped_ptr<ProvenanceAdaptor> provenanceAdaptor_;
     mutable boost::scoped_ptr<EventPrincipal> secondaryEventPrincipal_;
     mutable boost::shared_ptr<BranchMapper> eventBranchMapper_;
+    std::vector<ParentageID> parentageIDLookup_;
   }; // class RootFile
 
 }
