@@ -23,16 +23,14 @@
 #include "TSystem.h"
 
 namespace edm {
-  namespace {
-    std::string const streamerInfo = std::string("StreamerInfo");
-  }
   RootInputFileSequence::RootInputFileSequence(
                 ParameterSet const& pset,
                 PoolSource const& input,
                 InputFileCatalog const& catalog,
                 PrincipalCache& cache,
-                bool primaryFiles) :
+                InputType::InputType inputType) :
     input_(input),
+    inputType_(inputType),
     catalog_(catalog),
     firstFile_(true),
     fileIterBegin_(fileCatalogItems().begin()),
@@ -45,7 +43,7 @@ namespace edm {
     flatDistribution_(),
     indexesIntoFiles_(fileCatalogItems().size()),
     orderedProcessHistoryIDs_(),
-    eventSkipperByID_(primaryFiles ? EventSkipperByID::create(pset).release() : 0),
+    eventSkipperByID_(inputType==InputType::Primary ? EventSkipperByID::create(pset).release() : 0),
     eventsRemainingInFile_(0),
     // The default value provided as the second argument to the getUntrackedParameter function call
     // is not used when the ParameterSet has been validated and the parameters are not optional
@@ -54,16 +52,15 @@ namespace edm {
     // yet, so the ParameterSet does not get validated yet.  As soon as all the modules with a SecSource
     // have defined descriptions, the defaults in the getUntrackedParameterSet function calls can
     // and should be deleted from the code.
-    numberOfEventsToSkip_(primaryFiles ? pset.getUntrackedParameter<unsigned int>("skipEvents", 0U) : 0U),
-    noEventSort_(primaryFiles ? pset.getUntrackedParameter<bool>("noEventSort", true) : false),
+    numberOfEventsToSkip_(inputType==InputType::Primary ? pset.getUntrackedParameter<unsigned int>("skipEvents", 0U) : 0U),
+    noEventSort_(inputType==InputType::Primary ? pset.getUntrackedParameter<bool>("noEventSort", true) : false),
     skipBadFiles_(pset.getUntrackedParameter<bool>("skipBadFiles", false)),
     treeCacheSize_(noEventSort_ ? pset.getUntrackedParameter<unsigned int>("cacheSize", roottree::defaultCacheSize) : 0U),
     treeMaxVirtualSize_(pset.getUntrackedParameter<int>("treeMaxVirtualSize", -1)),
     setRun_(pset.getUntrackedParameter<unsigned int>("setRunNumber", 0U)),
     groupSelectorRules_(pset, "inputCommands", "InputSource"),
-    primaryFiles_(primaryFiles),
-    duplicateChecker_(primaryFiles ? new DuplicateChecker(pset) : 0),
-    dropDescendants_(pset.getUntrackedParameter<bool>("dropDescendantsOfDroppedBranches", primary())),
+    duplicateChecker_(inputType==InputType::Primary ? new DuplicateChecker(pset) : 0),
+    dropDescendants_(pset.getUntrackedParameter<bool>("dropDescendantsOfDroppedBranches", inputType != InputType::SecondarySource)),
     usingGoToEvent_(false) {
 
     //we now allow the site local config to specify what the TTree cache size should be
@@ -71,10 +68,15 @@ namespace edm {
     if(treeCacheSize_ != 0U && pSLC.isAvailable() && pSLC->sourceTTreeCacheSize()) {
       treeCacheSize_ = *(pSLC->sourceTTreeCacheSize());
     }
-    StorageFactory *factory = StorageFactory::get();
-    for(fileIter_ = fileIterBegin_; fileIter_ != fileIterEnd_; ++fileIter_) {
-      factory->activateTimeout(fileIter_->fileName());
-      factory->stagein(fileIter_->fileName());
+
+    if (inputType_ == InputType::Primary) {
+      //NOTE: we do not want to stage in secondary files since we can be given a list of
+      // thousands of files and prestaging all those files can cause a site to fail
+      StorageFactory *factory = StorageFactory::get();
+      for(fileIter_ = fileIterBegin_; fileIter_ != fileIterEnd_; ++fileIter_) {
+        factory->activateTimeout(fileIter_->fileName());
+        factory->stagein(fileIter_->fileName());
+      }
     }
 
     std::string parametersMustMatch = pset.getUntrackedParameter<std::string>("parametersMustMatch", std::string("permissive"));
@@ -83,7 +85,7 @@ namespace edm {
     std::string branchesMustMatch = pset.getUntrackedParameter<std::string>("branchesMustMatch", std::string("permissive"));
     if(branchesMustMatch == std::string("strict")) branchesMustMatch_ = BranchDescription::Strict;
 
-    if(primary()) {
+    if(inputType!=InputType::SecondarySource) {
       for(fileIter_ = fileIterBegin_; fileIter_ != fileIterEnd_; ++fileIter_) {
         initFile(skipBadFiles_);
         if(rootFile_) break;
@@ -129,9 +131,9 @@ namespace edm {
   void RootInputFileSequence::closeFile_() {
     // close the currently open file, if any, and delete the RootFile object.
     if(rootFile_) {
-      if (primary()) {
+      if (inputType_ != InputType::SecondarySource) {
         std::auto_ptr<InputSource::FileCloseSentry>
-        sentry((primaryFiles_) ? new InputSource::FileCloseSentry(input_) : 0);
+          sentry((inputType_ == InputType::Primary) ? new InputSource::FileCloseSentry(input_) : 0);
         rootFile_->close();
         if(duplicateChecker_) duplicateChecker_->inputFileClosed();
       }
@@ -149,7 +151,7 @@ namespace edm {
     if (fileIterLastOpened_ != fileIterEnd_) {
       size_t currentIndexIntoFile = fileIterLastOpened_ - fileIterBegin_;
       bool needIndexesForDuplicateChecker = duplicateChecker_ && duplicateChecker_->checkingAllFiles() && !duplicateChecker_->checkDisabled();
-      bool deleteIndexIntoFile = primaryFiles_ &&
+      bool deleteIndexIntoFile = inputType_ == InputType::Primary &&
                                  !needIndexesForDuplicateChecker &&
                                  !usingGoToEvent_;
       if (deleteIndexIntoFile) {
@@ -164,40 +166,37 @@ namespace edm {
     // Determine whether we have a fallback URL specified; if so, prepare it;
     // Only valid if it is non-empty and differs from the original filename.
     std::string fallbackName = fileIter_->fallbackFileName();
-    bool hasFallbackUrl = (!fallbackName.empty()) || (fallbackName == fileIter_->fileName());
+    bool hasFallbackUrl = !fallbackName.empty() || fallbackName == fileIter_->fileName();
 
     boost::shared_ptr<InputFile> filePtr;
     try {
       std::auto_ptr<InputSource::FileOpenSentry>
-        sentry(primaryFiles_ ? new InputSource::FileOpenSentry(input_) : 0);
+        sentry(inputType_ == InputType::Primary ? new InputSource::FileOpenSentry(input_) : 0);
       filePtr.reset(new InputFile(gSystem->ExpandPathName(fileIter_->fileName().c_str()), "  Initiating request to open file "));
     }
     catch (cms::Exception const& e) {
       if(!skipBadFiles  && !hasFallbackUrl) {
-        if(e.explainSelf().find(streamerInfo) != std::string::npos) {
-          throw Exception(errors::FileReadError) << e.explainSelf() << "\n" <<
-            "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " could not be read properly.\n" <<
-            "Possibly the format is incompatible with the current release.\n";
-        }
-        throw Exception(errors::FileOpenError) << e.explainSelf() << "\n" <<
-           "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " was not found, could not be opened, or is corrupted.\n";
+        Exception ex(errors::FileOpenError, "", e);
+        //ex.addContext("Calling RootInputFileSequence::initFile()");
+        //ex.clearMessage();
+        ex << "Input file " << fileIter_->fileName() << " was not found, could not be opened, or is corrupted.\n";
+        throw ex;
       }
     }
     if(!filePtr && (hasFallbackUrl)) {
       try {
         std::auto_ptr<InputSource::FileOpenSentry>
-          sentry(primaryFiles_ ? new InputSource::FileOpenSentry(input_) : 0);
+          sentry(inputType_ == InputType::Primary ? new InputSource::FileOpenSentry(input_) : 0);
         filePtr.reset(new InputFile(gSystem->ExpandPathName(fallbackName.c_str()), "  Fallback request to file "));
       }
       catch (cms::Exception const& e) {
         if(!skipBadFiles) {
-          if(e.explainSelf().find(streamerInfo) != std::string::npos) {
-            throw Exception(errors::FileReadError) << e.explainSelf() << "\n" <<
-              "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " could not be read properly.\n" <<
-              "Possibly the format is incompatible with the current release.\n";
-          }
-          throw Exception(errors::FileOpenError) << e.explainSelf() << "\n" <<
-             "RootInputFileSequence::initFile(): Input fallback file " << fallbackName << " was not found, could not be opened, or is corrupted.\n";
+          Exception ex(errors::FileOpenError, "", e);
+          //ex.addContext("Calling RootInputFileSequence::initFile()");
+          //ex.clearMessage();
+          ex << "Input file " << fileIter_->fileName() << " was not found, could not be opened, or is corrupted.\n";
+          ex << "Fallback Input file " << fallbackName << " also was not found, could not be opened, or is corrupted.\n";
+          throw ex;
         }
       }
     }
@@ -210,13 +209,20 @@ namespace edm {
           input_.processingMode(),
           setRun_,
           noEventSort_,
-          groupSelectorRules_, !primaryFiles_, duplicateChecker_, dropDescendants_,
+          groupSelectorRules_,
+          inputType_,
+          duplicateChecker_, dropDescendants_,
                                                  indexesIntoFiles_, currentIndexIntoFile, orderedProcessHistoryIDs_, usingGoToEvent_));
 
       fileIterLastOpened_ = fileIter_;
       indexesIntoFiles_[currentIndexIntoFile] = rootFile_->indexIntoFileSharedPtr();
-      rootFile_->reportOpened(primary() ?
-         (primaryFiles_ ? "primaryFiles" : "secondaryFiles") : "mixingFiles");
+      char const* inputType = 0;
+      switch(inputType_) {
+      case InputType::Primary: inputType = "primaryFiles"; break;
+      case InputType::SecondaryFile: inputType = "secondaryFiles"; break;
+      case InputType::SecondarySource: inputType = "mixingFiles"; break;
+      }
+      rootFile_->reportOpened(inputType);
     } else {
       if(!skipBadFiles) {
         throw Exception(errors::FileOpenError) <<
@@ -234,7 +240,7 @@ namespace edm {
   bool RootInputFileSequence::nextFile(PrincipalCache& cache) {
     if(fileIter_ != fileIterEnd_) ++fileIter_;
     if(fileIter_ == fileIterEnd_) {
-      if(primaryFiles_) {
+      if(inputType_ == InputType::Primary) {
         return false;
       } else {
         fileIter_ = fileIterBegin_;
@@ -243,7 +249,7 @@ namespace edm {
 
     initFile(skipBadFiles_);
 
-    if(primaryFiles_ && rootFile_) {
+    if(inputType_ == InputType::Primary && rootFile_) {
       size_t size = productRegistry()->size();
       // make sure the new product registry is compatible with the main one
       std::string mergeInfo = productRegistryUpdate().merge(*rootFile_->productRegistry(),
@@ -263,7 +269,7 @@ namespace edm {
 
   bool RootInputFileSequence::previousFile(PrincipalCache& cache) {
     if(fileIter_ == fileIterBegin_) {
-      if(primaryFiles_) {
+      if(inputType_ == InputType::Primary) {
         return false;
       } else {
         fileIter_ = fileIterEnd_;
@@ -273,7 +279,7 @@ namespace edm {
 
     initFile(false);
 
-    if(primaryFiles_ && rootFile_) {
+    if(inputType_ == InputType::Primary && rootFile_) {
       size_t size = productRegistry()->size();
       // make sure the new product registry is compatible to the main one
       std::string mergeInfo = productRegistryUpdate().merge(*rootFile_->productRegistry(),
@@ -384,7 +390,7 @@ namespace edm {
   RootInputFileSequence::reset(PrincipalCache& cache) {
     //NOTE: Need to handle duplicate checker
     // Also what if skipBadFiles_==true and the first time we succeeded but after a reset we fail?
-    if(primary()) {
+    if(inputType_ != InputType::SecondarySource) {
       firstFile_ = true;
       for(fileIter_ = fileIterBegin_; fileIter_ != fileIterEnd_; ++fileIter_) {
         initFile(skipBadFiles_);
@@ -553,34 +559,60 @@ namespace edm {
     groupSelectorRules_ = GroupSelectorRules(pset, "inputCommands", "InputSource");
   }
 
-  void
-  RootInputFileSequence::readMany(int number, EventPrincipalVector& result) {
-    for(int i = 0; i < number; ++i) {
-      boost::shared_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-      EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-      if(ev == 0) {
-        return;
+
+  EventPrincipal*
+  RootInputFileSequence::readOneSequential() {
+    skipBadFiles_ = false;
+    if(fileIter_ == fileIterEnd_ || !rootFile_) {
+      if(fileIterEnd_ == fileIterBegin_) {
+        throw Exception(errors::Configuration) << "RootInputFileSequence::readOneSequential(): no input files specified.\n";
       }
-      assert(ev == ep.get());
-      result.push_back(ep);
-      rootFile_->nextEventEntry();
+      fileIter_ = fileIterBegin_;
+      initFile(false);
+      rootFile_->setAtEventEntry(0);
     }
+    EventPrincipal* ep = rootFile_->clearAndReadCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+    if(ep == 0) {
+      ++fileIter_;
+      if(fileIter_ == fileIterEnd_) {
+        return 0;
+      }
+      initFile(false);
+      rootFile_->setAtEventEntry(0);
+      return readOneSequential();
+    }
+    rootFile_->nextEventEntry();
+    return ep;
   }
 
-  void
-  RootInputFileSequence::readManyRandom(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber) {
-    if(0 != number && (fileIterEnd_ == fileIterBegin_) ) {
-      throw Exception(errors::Configuration) << "RootInputFileSequence::readManyRandom(): no input files specified.\n";
+  EventPrincipal*
+  RootInputFileSequence::readOneSpecified(EventID const& id) {
+    skipBadFiles_ = false;
+    bool found = skipToItem(id.run(), id.luminosityBlock(), id.event());
+    if(!found) {
+      throw Exception(errors::NotFound) <<
+	"RootInputFileSequence::readOneSpecified(): Secondary Input file " <<
+	fileIter_->fileName() <<
+	" does not contain specified event:\n" << id << "\n";
     }
-    result.reserve(number);
-    if (!flatDistribution_) {
+    EventPrincipal* ep = rootFile_->clearAndReadCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+    assert(ep != 0);
+    return ep;
+  }
+
+  EventPrincipal*
+  RootInputFileSequence::readOneRandom() {
+    if(fileIterEnd_ == fileIterBegin_) {
+      throw Exception(errors::Configuration) << "RootInputFileSequence::readOneRandom(): no input files specified.\n";
+    }
+    if(!flatDistribution_) {
       Service<RandomNumberGenerator> rng;
       CLHEP::HepRandomEngine& engine = rng->getEngine();
       flatDistribution_.reset(new CLHEP::RandFlat(engine));
     }
     skipBadFiles_ = false;
     unsigned int currentSeqNumber = fileIter_ - fileIterBegin_;
-    while(eventsRemainingInFile_ < number) {
+    while(eventsRemainingInFile_ == 0) {
       fileIter_ = fileIterBegin_ + flatDistribution_->fireInt(fileCatalogItems().size());
       unsigned int newSeqNumber = fileIter_ - fileIterBegin_;
       if(newSeqNumber != currentSeqNumber) {
@@ -590,87 +622,23 @@ namespace edm {
       eventsRemainingInFile_ = rootFile_->eventTree().entries();
       if(eventsRemainingInFile_ == 0) {
         throw Exception(errors::NotFound) <<
-           "RootInputFileSequence::readManyRandom_(): Secondary Input file " << fileIter_->fileName() << " contains no events.\n";
+	  "RootInputFileSequence::readOneRandom(): Secondary Input file " << fileIter_->fileName() << " contains no events.\n";
       }
       rootFile_->setAtEventEntry(flatDistribution_->fireInt(eventsRemainingInFile_));
     }
-    fileSeqNumber = fileIter_ - fileIterBegin_;
-    for(int i = 0; i < number; ++i) {
-      boost::shared_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-      EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-      if(ev == 0) {
-        rewindFile();
-        ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-        assert(ev != 0);
-      }
-      assert(ev == ep.get());
-      result.push_back(ep);
-      --eventsRemainingInFile_;
-      rootFile_->nextEventEntry();
+
+    EventPrincipal* ep = rootFile_->clearAndReadCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+    if(ep == 0) {
+      rewindFile();
+      ep = rootFile_->clearAndReadCurrentEvent(rootFile_->secondaryEventPrincipal(), rootFile_);
+      assert(ep != 0);
     }
+    --eventsRemainingInFile_;
+    rootFile_->nextEventEntry();
+    return ep;
   }
 
-  void
-  RootInputFileSequence::readManySequential(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber) {
-    if(0 != number && (fileIterEnd_ == fileIterBegin_) ) {
-      throw Exception(errors::Configuration) << "RootInputFileSequence::readManySequential(): no input files specified.\n";
-    }
-    result.reserve(number);
-    skipBadFiles_ = false;
-    if (fileIter_ == fileIterEnd_ || !rootFile_) {
-      fileIter_ = fileIterBegin_;
-      initFile(false);
-      rootFile_->setAtEventEntry(0);
-    }
-    fileSeqNumber = fileIter_ - fileIterBegin_;
-    unsigned int numberRead = 0;
-    for(int i = 0; i < number; ++i) {
-      boost::shared_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-      EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-      if(ev == 0) {
-        if (numberRead == 0) {
-          ++fileIter_;
-          fileSeqNumber = fileIter_ - fileIterBegin_;
-          if (fileIter_ == fileIterEnd_) {
-            return;
-          }
-          initFile(false);
-          rootFile_->setAtEventEntry(0);
-          return readManySequential(number, result, fileSeqNumber);
-        }
-        return;
-      }
-      assert(ev == ep.get());
-      result.push_back(ep);
-      ++numberRead;
-      rootFile_->nextEventEntry();
-    }
-  }
 
-  void
-  RootInputFileSequence::readManySpecified(std::vector<EventID> const& events, EventPrincipalVector& result) {
-    skipBadFiles_ = false;
-    result.reserve(events.size());
-    for (std::vector<EventID>::const_iterator it = events.begin(), itEnd = events.end(); it != itEnd; ++it) {
-      bool found = skipToItem(it->run(), it->luminosityBlock(), it->event());
-      if (!found) {
-        throw Exception(errors::NotFound) <<
-           "RootInputFileSequence::readManySpecified_(): Secondary Input file " <<
-           fileIter_->fileName() <<
-           " does not contain specified event:\n" << *it << "\n";
-      }
-      boost::shared_ptr<EventPrincipal> ep(new EventPrincipal(rootFile_->productRegistry(), processConfiguration()));
-      EventPrincipal* ev = rootFile_->readCurrentEvent(*ep, rootFile_);
-      if (ev == 0) {
-        throw Exception(errors::EventCorruption) <<
-           "RootInputFileSequence::readManySpecified_(): Secondary Input file " <<
-           fileIter_->fileName() <<
-           " contains specified event " << *it << " that cannot be read.\n";
-      }
-      assert(ev == ep.get());
-      result.push_back(ep);
-    }
-  }
 
   void
   RootInputFileSequence::fillDescription(ParameterSetDescription & desc) {

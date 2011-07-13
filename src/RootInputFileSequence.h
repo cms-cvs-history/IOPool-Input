@@ -7,6 +7,8 @@ RootInputFileSequence: This is an InputSource
 
 ----------------------------------------------------------------------*/
 
+#include "InputType.h"
+
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/GroupSelectorRules.h"
 #include "FWCore/Framework/interface/ProcessingController.h"
@@ -38,10 +40,9 @@ namespace edm {
 
   class RootInputFileSequence : private boost::noncopyable {
   public:
-    explicit RootInputFileSequence(ParameterSet const& pset, PoolSource const& input, InputFileCatalog const& catalog, PrincipalCache& cache, bool primaryFiles);
+    explicit RootInputFileSequence(ParameterSet const& pset, PoolSource const& input, InputFileCatalog const& catalog, PrincipalCache& cache, InputType::InputType inputType);
     virtual ~RootInputFileSequence();
 
-    typedef VectorInputSource::EventPrincipalVector EventPrincipalVector;
     typedef boost::shared_ptr<RootFile> RootFileSharedPtr;
     EventPrincipal* readEvent(EventPrincipal& cache, boost::shared_ptr<LuminosityBlockPrincipal> lb);
     boost::shared_ptr<LuminosityBlockAuxiliary> readLuminosityBlockAuxiliary_();
@@ -57,10 +58,9 @@ namespace edm {
     bool skipToItem(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event);
     void rewind_();
     void reset(PrincipalCache& cache);
-    void readMany(int number, EventPrincipalVector& result);
-    void readManyRandom(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber);
-    void readManySequential(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber);
-    void readManySpecified(std::vector<EventID> const& events, EventPrincipalVector& result); 
+    EventPrincipal* readOneRandom();
+    EventPrincipal* readOneSequential();
+    EventPrincipal* readOneSpecified(EventID const& id);
     void dropUnwantedBranches_(std::vector<std::string> const& wantedBranches);
     boost::shared_ptr<ProductRegistry const> fileProductRegistry() const;
     static void fillDescription(ParameterSetDescription & desc);
@@ -81,6 +81,7 @@ namespace edm {
     bool const primary() const;
 
     PoolSource const& input_;
+    InputType::InputType inputType_;
     InputFileCatalog const& catalog_;
     bool firstFile_;
     std::vector<FileCatalogItem>::const_iterator fileIterBegin_;

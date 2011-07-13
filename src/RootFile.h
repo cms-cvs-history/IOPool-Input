@@ -17,6 +17,7 @@ RootFile.h // used by ROOT input sources
 #include "boost/array.hpp"
 
 #include "RootTree.h"
+#include "InputType.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/InputSource.h"
 #include "DataFormats/Provenance/interface/BranchChildren.h"
@@ -29,6 +30,7 @@ RootFile.h // used by ROOT input sources
 #include "DataFormats/Provenance/interface/BranchListIndex.h"
 #include "DataFormats/Provenance/interface/IndexIntoFile.h"
 #include "DataFormats/Provenance/interface/EventProcessHistoryID.h" // backward compatibility
+
 
 namespace edm {
 
@@ -58,7 +60,7 @@ namespace edm {
              RunNumber_t const& forcedRunNumber,
              bool noEventSort,
              GroupSelectorRules const& groupSelectorRules,
-             bool secondaryFile,
+             InputType::InputType inputType,
              boost::shared_ptr<DuplicateChecker> duplicateChecker,
              bool dropDescendantsOfDroppedProducts,
              std::vector<boost::shared_ptr<IndexIntoFile> > const& indexesIntoFiles,
@@ -69,6 +71,9 @@ namespace edm {
     void reportOpened(std::string const& inputType);
     void close();
     EventPrincipal* readCurrentEvent(EventPrincipal& cache,
+                 boost::shared_ptr<RootFile> rootFilePtr,
+                 boost::shared_ptr<LuminosityBlockPrincipal> lb = boost::shared_ptr<LuminosityBlockPrincipal>());
+    EventPrincipal* clearAndReadCurrentEvent(EventPrincipal& cache,
                  boost::shared_ptr<RootFile> rootFilePtr,
                  boost::shared_ptr<LuminosityBlockPrincipal> lb = boost::shared_ptr<LuminosityBlockPrincipal>());
     EventPrincipal* readEvent(EventPrincipal& cache,
@@ -124,13 +129,15 @@ namespace edm {
     bool wasFirstEventJustRead() const;
     IndexIntoFile::IndexIntoFileItr indexIntoFileIter() const;
     void setPosition(IndexIntoFile::IndexIntoFileItr const& position);
-
+    EventPrincipal& secondaryEventPrincipal() {
+      return *secondaryEventPrincipal_;
+    }
   private:
     RootTreePtrArray& treePointers() {return treePointers_;}
     bool skipThisEntry();
     IndexIntoFile::EntryType getEntryTypeWithSkipping();
     void setIfFastClonable(int remainingEvents, int remainingLumis);
-    void validateFile(bool secondaryFile, bool usingGoToEvent);
+    void validateFile(InputType::InputType inputType, bool usingGoToEvent);
     void fillIndexIntoFile();
     void fillEventAuxiliary();
     void fillThisEventAuxiliary();
@@ -141,7 +148,7 @@ namespace edm {
     void overrideRunNumber(LuminosityBlockID& id);
     void overrideRunNumber(EventID& id, bool isRealData);
     std::string const& newBranchToOldBranch(std::string const& newBranch) const;
-    void dropOnInput(ProductRegistry& reg, GroupSelectorRules const& rules, bool dropDescendants, bool secondaryFile);
+    void dropOnInput(ProductRegistry& reg, GroupSelectorRules const& rules, bool dropDescendants, InputType::InputType inputType);
     void readParentageTree();
     void readEntryDescriptionTree();
     void readEventHistoryTree();
@@ -186,10 +193,11 @@ namespace edm {
     TTree* eventHistoryTree_;
     boost::shared_ptr<EventSelectionIDVector> eventSelectionIDs_;
     boost::shared_ptr<BranchListIndexes> branchListIndexes_;
-    boost::shared_ptr<History> history_;
+    boost::scoped_ptr<History> history_;
     boost::shared_ptr<BranchChildren> branchChildren_;
     boost::shared_ptr<DuplicateChecker> duplicateChecker_;
-    boost::shared_ptr<ProvenanceAdaptor> provenanceAdaptor_;
+    boost::scoped_ptr<ProvenanceAdaptor> provenanceAdaptor_;
+    mutable boost::scoped_ptr<EventPrincipal> secondaryEventPrincipal_;
   }; // class RootFile
 
 }

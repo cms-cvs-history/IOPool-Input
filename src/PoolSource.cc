@@ -1,6 +1,7 @@
 /*----------------------------------------------------------------------
 ----------------------------------------------------------------------*/
 #include "PoolSource.h"
+#include "InputType.h"
 #include "RootInputFileSequence.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "FWCore/Framework/interface/EventPrincipal.h"
@@ -52,9 +53,9 @@ namespace edm {
   PoolSource::PoolSource(ParameterSet const& pset, InputSourceDescription const& desc) :
     VectorInputSource(pset, desc),
     rootServiceChecker_(),
-    primaryFileSequence_(new RootInputFileSequence(pset, *this, catalog(), principalCache(), primary())),
+    primaryFileSequence_(new RootInputFileSequence(pset, *this, catalog(), principalCache(), primary() ? InputType::Primary : InputType::SecondarySource)),
     secondaryFileSequence_(catalog(1).empty() ? 0 :
-                           new RootInputFileSequence(pset, *this, catalog(1), principalCache(), false)),
+                           new RootInputFileSequence(pset, *this, catalog(1), principalCache(), InputType::SecondaryFile)),
     secondaryRunPrincipal_(),
     secondaryLumiPrincipal_(),
     secondaryEventPrincipal_(secondaryFileSequence_ ? new EventPrincipal(secondaryFileSequence_->fileProductRegistry(), processConfiguration()) : 0),
@@ -262,28 +263,22 @@ namespace edm {
     return primaryFileSequence_->goToEvent(eventID, principalCache());
   }
 
-  void
-  PoolSource::readMany_(int number, EventPrincipalVector& result) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readMany(number, result);
+  EventPrincipal*
+  PoolSource::readOneRandom() {
+    assert(!secondaryFileSequence_);
+    return primaryFileSequence_->readOneRandom();
   }
 
-  void
-  PoolSource::readManyRandom_(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readManyRandom(number, result, fileSeqNumber);
+  EventPrincipal*
+  PoolSource::readOneSequential() {
+    assert(!secondaryFileSequence_);
+    return primaryFileSequence_->readOneSequential();
   }
 
-  void
-  PoolSource::readManySequential_(int number, EventPrincipalVector& result, unsigned int& fileSeqNumber) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readManySequential(number, result, fileSeqNumber);
-  }
-
-  void
-  PoolSource::readManySpecified_(std::vector<EventID> const& events, EventPrincipalVector& result) {
-    assert (!secondaryFileSequence_);
-    primaryFileSequence_->readManySpecified(events, result);
+  EventPrincipal*
+  PoolSource::readOneSpecified(EventID const& id) {
+    assert(!secondaryFileSequence_);
+    return primaryFileSequence_->readOneSpecified(id);
   }
 
   void
