@@ -166,6 +166,20 @@ namespace edm {
     }
     closeFile_();
 
+    // Check if the logical file name was found.
+    if(fileIter_->fileName().empty()) {
+      // LFN not found in catalog.
+      InputFile::reportSkippedFile(fileIter_->fileName(), fileIter_->logicalFileName());
+      if(!skipBadFiles) {
+        throw cms::Exception("LogicalFileNameNotFound", "RootInputFileSequence::initFile()\n")
+          << "Logical file name '" << fileIter_->logicalFileName() << "' was not found in the file catalog.\n"
+          << "If you wanted a local file, you forgot the 'file:' prefix\n"
+          << "before the file name in your configuration file.\n";
+      }
+      LogWarning("") << "Input logical file: " << fileIter_->logicalFileName() << " was not found in the catalog, and will be skipped.\n";
+      return;
+    }
+
     // Determine whether we have a fallback URL specified; if so, prepare it;
     // Only valid if it is non-empty and differs from the original filename.
     std::string fallbackName = fileIter_->fallbackFileName();
@@ -179,6 +193,7 @@ namespace edm {
     }
     catch (cms::Exception const& e) {
       if(!skipBadFiles  && !hasFallbackUrl) {
+        InputFile::reportSkippedFile(fileIter_->fileName(), fileIter_->logicalFileName());
         if(e.explainSelf().find(streamerInfo) != std::string::npos) {
           throw Exception(errors::FileReadError) << e.explainSelf() << "\n" <<
             "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " could not be read properly.\n" <<
@@ -196,6 +211,7 @@ namespace edm {
       }
       catch (cms::Exception const& e) {
         if(!skipBadFiles) {
+          InputFile::reportSkippedFile(fileIter_->fileName(), fileIter_->logicalFileName());
           if(e.explainSelf().find(streamerInfo) != std::string::npos) {
             throw Exception(errors::FileReadError) << e.explainSelf() << "\n" <<
               "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " could not be read properly.\n" <<
@@ -223,6 +239,7 @@ namespace edm {
       rootFile_->reportOpened(primary() ?
          (primaryFiles_ ? "primaryFiles" : "secondaryFiles") : "mixingFiles");
     } else {
+      InputFile::reportSkippedFile(fileIter_->fileName(), fileIter_->logicalFileName());
       if(!skipBadFiles) {
         throw Exception(errors::FileOpenError) <<
            "RootInputFileSequence::initFile(): Input file " << fileIter_->fileName() << " was not found or could not be opened.\n";
