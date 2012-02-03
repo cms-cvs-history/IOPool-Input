@@ -205,6 +205,7 @@ namespace edm {
           InputFile::reportSkippedFile(fileIter_->fileName(), fileIter_->logicalFileName());
           Exception ex(errors::FileOpenError, "", e);
           ex.addContext("Calling RootInputFileSequence::initFile()");
+          ex.clearMessage();
           ex << "Input file " << fileIter_->fileName() << " was not found, could not be opened, or is corrupted.\n";
           throw ex;
         }
@@ -221,6 +222,7 @@ namespace edm {
           InputFile::reportSkippedFile(fileIter_->fileName(), fileIter_->logicalFileName());
           Exception ex(errors::FallbackFileOpenError, "", e);
           ex.addContext("Calling RootInputFileSequence::initFile()");
+          ex.clearMessage();
           ex << "Input file " << fileIter_->fileName() << " was not found, could not be opened, or is corrupted.\n";
           ex << "Fallback Input file " << fallbackName << " also was not found, could not be opened, or is corrupted.\n";
           throw ex;
@@ -618,7 +620,6 @@ namespace edm {
       rootFile_->setAtEventEntry(-1);
       return readOneSequential();
     }
-    std::cerr << "BARF SEQ: " << ep->id() << std::endl;
     return ep;
   }
 
@@ -644,7 +645,6 @@ namespace edm {
         return readOneSequentialWithID(id);
       }
     }
-    std::cerr << "BARF SEQ ID: " << ep->id() << std::endl;
     return ep;
   }
 
@@ -660,7 +660,6 @@ namespace edm {
     }
     EventPrincipal* ep = rootFile_->clearAndReadCurrentEvent(rootFile_->secondaryEventPrincipal());
     assert(ep != 0);
-    std::cerr << "BARF SPEC: " << ep->id() << std::endl;
     return ep;
   }
 
@@ -699,7 +698,6 @@ namespace edm {
       assert(ep != 0);
     }
     --eventsRemainingInFile_;
-    std::cerr << "BARF RAND: " << ep->id() << std::endl;
     return ep;
   }
 
@@ -741,7 +739,6 @@ namespace edm {
         return readOneRandomWithID(id);
       }
     }
-    std::cerr << "BARF RAND ID: " << ep->id() << std::endl;
     return ep;
   }
 
