@@ -374,8 +374,7 @@ namespace edm {
         // Insert the new branch description into the product registry.
         inputProdDescReg.copyProduct(newBD);
         // Fix up other per file metadata.
-        daqProvenanceHelper_->fixMetaData(processConfigurations_);
-        daqProvenanceHelper_->fixMetaData(pHistVector);
+        daqProvenanceHelper_->fixMetaData(processConfigurations_, pHistVector);
         daqProvenanceHelper_->fixMetaData(*branchIDLists_);
         daqProvenanceHelper_->fixMetaData(*branchChildren_);
       }
